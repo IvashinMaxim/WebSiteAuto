@@ -6,19 +6,9 @@
     <title>Объявления о продаже автомобилей</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .card {
-            transition: transform 0.2s;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-        }
-
-        .filter-section {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-        }
+        .card { transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
+        .filter-section { background-color: #f8f9fa; padding: 20px; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -30,73 +20,52 @@
     <div class="filter-section mb-4">
         <form th:action="@{/ads}" method="get" class="row g-3">
             <div class="col-md-3">
+                <label class="form-label">Поиск</label>
+                <input type="text" name="keyword" class="form-control" placeholder="Введите ключевые слова..."
+                       th:value="${filter != null ? filter.keyword : ''}">
+            </div>
+            <div class="col-md-3">
                 <label class="form-label">Марка</label>
-                <select name="brand" class="form-select">
+                <select name="brand" class="form-select" th:value="${filter.brand}">
                     <option value="">Все марки</option>
-                    <option th:each="b : ${brands}"
-                            th:value="${b}"
-                            th:text="${b}"
-                            th:selected="${filter != null && filter.brand == b}">
-                    </option>
+                    <option th:each="b : ${brands}" th:value="${b}" th:text="${b}" th:selected="${filter != null && filter.brand == b}"></option>
                 </select>
             </div>
-
             <div class="col-md-3">
                 <label class="form-label">Модель</label>
-                <select name="model" class="form-select">
+                <select name="model" class="form-select" th:value="${filter.model}">
                     <option value="">Все модели</option>
-                    <option th:each="m : ${models}"
-                            th:value="${m}"
-                            th:text="${m}"
-                            th:selected="${filter != null && filter.model == m}">
-                    </option>
+                    <option th:each="m : ${models}" th:value="${m}" th:text="${m}" th:selected="${filter != null && filter.model == m}"></option>
                 </select>
             </div>
-
             <div class="col-md-2">
                 <label class="form-label">Год от</label>
-                <select name="minYear" class="form-select">
+                <select name="minYear" class="form-select" th:value="${filter.minYear}">
                     <option value="">Любой</option>
-                    <option th:each="y : ${years}"
-                            th:value="${y}"
-                            th:text="${y}"
-                            th:selected="${filter != null && filter.minYear == y}">
-                    </option>
+                    <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${filter != null && filter.minYear == y}"></option>
                 </select>
             </div>
-
             <div class="col-md-2">
                 <label class="form-label">Год до</label>
-                <select name="maxYear" class="form-select">
+                <select name="maxYear" class="form-select" th:value="${filter.maxYear}">
                     <option value="">Любой</option>
-                    <option th:each="y : ${years}"
-                            th:value="${y}"
-                            th:text="${y}"
-                            th:selected="${filter != null && filter.maxYear == y}">
-                    </option>
+                    <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${filter != null && filter.maxYear == y}"></option>
                 </select>
             </div>
-
             <div class="col-md-3">
                 <label class="form-label">Пробег (км)</label>
                 <div class="input-group">
-                    <input type="number" name="minMileage" placeholder="От"
-                           class="form-control" th:value="${filter != null ? filter.minMileage : ''}">
-                    <input type="number" name="maxMileage" placeholder="До"
-                           class="form-control" th:value="${filter != null ? filter.maxMileage : ''}">
+                    <input type="number" name="minMileage" placeholder="От" class="form-control" th:value="${filter != null ? filter.minMileage : ''}">
+                    <input type="number" name="maxMileage" placeholder="До" class="form-control" th:value="${filter != null ? filter.maxMileage : ''}">
                 </div>
             </div>
-
             <div class="col-md-3">
                 <label class="form-label">Цена ($)</label>
                 <div class="input-group">
-                    <input type="number" name="minPrice" placeholder="От"
-                           class="form-control" th:value="${filter != null ? filter.minPrice : ''}">
-                    <input type="number" name="maxPrice" placeholder="До"
-                           class="form-control" th:value="${filter != null ? filter.maxPrice : ''}">
+                    <input type="number" name="minPrice" placeholder="От" class="form-control" th:value="${filter != null ? filter.minPrice : ''}">
+                    <input type="number" name="maxPrice" placeholder="До" class="form-control" th:value="${filter != null ? filter.maxPrice : ''}">
                 </div>
             </div>
-
             <div class="col-md-12 d-flex justify-content-end gap-2">
                 <button type="submit" class="btn btn-primary">Найти</button>
                 <a th:href="@{/ads}" class="btn btn-outline-secondary">Сбросить</a>
@@ -117,17 +86,13 @@
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
         <div class="col" th:each="ad : ${ads}">
             <div class="card h-100">
-                <a th:href="@{/ads/{id}(id=${ad.id})}"
-                   style="text-decoration: none;color: inherit;display: block">
-                    <div class="card-img-top bg-secondary"
-                         style="height: 180px; display: flex; align-items: center; justify-content: center;">
-                        <span class="text-white">Изображение автомобиля</span>
+                <a th:href="@{/ads/{id}(id=${ad.id})}" style="text-decoration: none;color: inherit;display: block">
+                    <div class="card-img-top" style="height: 180px; display: flex; align-items: center; justify-content: center;">
+                        <img th:src="${#lists.isEmpty(ad.imagePaths) ? '/images/no-image.png' : ad.imagePaths[0]}"
+                             alt="Изображение автомобиля" style="max-height: 100%; max-width: 100%; object-fit: contain;">
                     </div>
-
                     <div class="card-body">
                         <h5 class="card-title" th:text="${ad.title}"></h5>
-                        <!--                    <p class="card-text" th:text="${ad.description}"></p>-->
-
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item">
                                 <strong>Автомобиль:</strong>
@@ -148,15 +113,24 @@
                         </ul>
                     </div>
                 </a>
-
-                <!--                <div class="card-footer">-->
-                <!--                    <a th:href="@{/ads/edit/{id}(id=${ad.id})}" class="btn btn-warning btn-sm">-->
-                <!--                        <i class="bi bi-pencil"></i> Редактировать-->
-                <!--                    </a>-->
-                <!--                </div>-->
             </div>
         </div>
     </div>
+
+    <nav aria-label="Page navigation" th:if="${totalPages > 1}">
+        <ul class="pagination justify-content-center">
+            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                <a class="page-link" th:href="@{/ads(page=${currentPage - 1}, size=${10}, brand=${filter.brand}, model=${filter.model}, minYear=${filter.minYear}, maxYear=${filter.maxYear}, minMileage=${filter.minMileage}, maxMileage=${filter.maxMileage}, minPrice=${filter.minPrice}, maxPrice=${filter.maxPrice}, keyword=${filter.keyword})}">Предыдущая</a>
+            </li>
+            <li class="page-item" th:each="p : ${#numbers.sequence(0, totalPages - 1)}"
+                th:classappend="${currentPage == p} ? 'active'">
+                <a class="page-link" th:href="@{/ads(page=${p}, size=${10}, brand=${filter.brand}, model=${filter.model}, minYear=${filter.minYear}, maxYear=${filter.maxYear}, minMileage=${filter.minMileage}, maxMileage=${filter.maxMileage}, minPrice=${filter.minPrice}, maxPrice=${filter.maxPrice}, keyword=${filter.keyword})}" th:text="${p + 1}"></a>
+            </li>
+            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                <a class="page-link" th:href="@{/ads(page=${currentPage + 1}, size=${10}, brand=${filter.brand}, model=${filter.model}, minYear=${filter.minYear}, maxYear=${filter.maxYear}, minMileage=${filter.minMileage}, maxMileage=${filter.maxMileage}, minPrice=${filter.minPrice}, maxPrice=${filter.maxPrice}, keyword=${filter.keyword})}">Следующая</a>
+            </li>
+        </ul>
+    </nav>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

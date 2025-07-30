@@ -6,17 +6,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class CarAdFilter {
-    private String brand;
-    private String model;
-    private Integer minYear;
-    private Integer maxYear;
-    private Integer minMileage;
-    private Integer maxMileage;
-    private BigDecimal minPrice;
-    private BigDecimal maxPrice;
-}
+
+public record CarAdFilter(String brand, String model, Integer minYear, Integer maxYear,
+                          Integer minMileage, Integer maxMileage, BigDecimal minPrice, BigDecimal maxPrice,
+                          String keyword){}
 

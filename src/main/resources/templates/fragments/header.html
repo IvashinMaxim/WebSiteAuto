@@ -30,8 +30,13 @@
                 <li class="nav-item d-flex align-items-center me-2" sec:authorize="isAuthenticated()">
                     <span class="text-white">Привет, <span th:text="${#authentication.name}">user</span></span>
                 </li>
+
                 <li class="nav-item" sec:authorize="isAuthenticated()">
-                    <form th:action="@{/logout}" method="post">
+                    <a class="nav-link" th:href="@{/ads/profile}">Профиль</a>
+                </li>
+
+                <li class="nav-item" sec:authorize="isAuthenticated()">
+                    <form th:action="@{/logout}" method="post" class="mb-0">
                         <button type="submit" class="nav-link btn btn-link text-white p-0">Выйти</button>
                     </form>
                 </li>

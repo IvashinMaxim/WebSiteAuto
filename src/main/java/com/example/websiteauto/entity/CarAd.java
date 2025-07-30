@@ -2,10 +2,6 @@ package com.example.websiteauto.entity;
 
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,6 +10,7 @@ import lombok.Builder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -21,7 +18,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "carAd")
+@Table(name = "car_ad")
 public class CarAd {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,6 +41,11 @@ public class CarAd {
     private int mileage;
     private BigDecimal price;
     private LocalDateTime createdAt;
+
+    @ElementCollection
+    @CollectionTable(name = "car_ad_images", joinColumns = @JoinColumn(name = "car_ad_id"))
+    @Column(name = "image_path")
+    private List<String> imagePaths;
 
     @PrePersist
     protected void onCreate() {

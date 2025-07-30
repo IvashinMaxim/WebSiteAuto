@@ -1,7 +1,7 @@
 package com.example.websiteauto.exception;
 
-public class CarAdNotFoundException extends EntityNotFoundException {
+public class CarAdNotFoundException extends RuntimeException {
     public CarAdNotFoundException(Long id) {
-        super("Car ad not found with id: " + id);
+        super("Объявление с ID " + id + " не найдено");
     }
 }

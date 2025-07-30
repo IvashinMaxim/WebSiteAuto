@@ -1,6 +1,10 @@
 package com.example.websiteauto.repositories;
 
+import com.example.websiteauto.dto.response.CarAdResponse;
 import com.example.websiteauto.entity.CarAd;
+import com.example.websiteauto.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -22,4 +26,6 @@ public interface CarAdRepository extends JpaRepository<CarAd, Long> , JpaSpecifi
     List<Integer> findDistinctYears();
 
 
+    List<CarAd> findAllByAuthor(User user);
+    Page<CarAd> findAllByAuthor(User author, Pageable pageable);
 }

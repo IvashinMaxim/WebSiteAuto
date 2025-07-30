@@ -2,99 +2,32 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${carAd.title}">Детали объявления</title>
+    <title>Детали объявления</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .car-image {
-            max-height: 500px;
-            object-fit: cover;
-        }
-
-        .info-card {
-            border: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-    </style>
 </head>
 <body>
 <div th:replace="~{fragments/header.html :: header}"></div>
 
 <div class="container my-5">
-    <a href="javascript:history.back()" class="btn btn-outline-primary mb-4">
-        &larr; Назад к списку
-    </a>
-
-    <div th:if="${carAd}">
-        <div class="row">
-            <div class="col-md-8 mb-4">
-                <div class="card h-100">
-                    <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center"
-                         style="height: 400px;">
-                        <span class="text-white fs-4">Изображение автомобиля</span>
-                    </div>
-                    <div class="card-body">
-                        <h2 class="card-title" th:text="${carAd.title}"></h2>
-                        <p class="card-text" th:text="${carAd.description}"></p>
-                    </div>
-                </div>
+    <h1 th:text="${carAd.title}"></h1>
+    <div class="row">
+        <div class="col-md-6">
+            <div th:if="${#lists.isEmpty(carAd.imagePaths)}" class="text-center">
+                <img src="/images/no-image.png" alt="Нет изображения" style="max-height: 300px;">
             </div>
-
-            <div class="col-md-4">
-                <div class="card info-card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h4 class="mb-0">Детали автомобиля</h4>
-                    </div>
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span><strong>Марка:</strong></span>
-                            <span th:text="${carAd.car.brand}"></span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span><strong>Модель:</strong></span>
-                            <span th:text="${carAd.car.model}"></span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span><strong>Год выпуска:</strong></span>
-                            <span th:text="${carAd.car.year}"></span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span><strong>Пробег:</strong></span>
-                            <span th:text="${#numbers.formatInteger(carAd.mileage, 1, 'POINT') + ' км'}"></span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span><strong>Цена:</strong></span>
-                            <span class="text-success fw-bold"
-                                  th:text="${#numbers.formatInteger(carAd.price, 1, 'POINT') + ' $'}"></span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="card info-card">
-                    <div class="card-header bg-info text-white">
-                        <h4 class="mb-0">Продавец</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width: 50px; height: 50px;">
-                                <span class="text-white">Ф</span>
-                            </div>
-                            <div class="ms-3">
-                                <h5 class="mb-0" th:text="${carAd.authorUsername}"></h5>
-                                <small class="text-muted" th:text="'Продавец'"></small>
-                            </div>
-                        </div>
-                        <!--                    <button class="btn btn-outline-primary w-100">-->
-                        <!--                        <i class="bi bi-telephone"></i> Показать телефон-->
-                        <!--                    </button>-->
-                    </div>
-                </div>
+            <div th:each="image : ${carAd.imagePaths}" class="mb-3">
+                <img th:src="@{{name}(name=${image})}" alt="Изображение автомобиля" style="max-height: 300px; max-width: 100%;">
             </div>
         </div>
-    </div>
-    <div th:unless="${carAd}" class="alert alert-danger">
-        Объявление не найдено.
+        <div class="col-md-6">
+            <ul class="list-group">
+                <li class="list-group-item"><strong>Автомобиль:</strong> <span th:text="${carAd.car.brand + ' ' + carAd.car.model}"></span></li>
+                <li class="list-group-item"><strong>Год:</strong> <span th:text="${carAd.car.year}"></span></li>
+                <li class="list-group-item"><strong>Пробег:</strong> <span th:text="${#numbers.formatInteger(carAd.mileage, 1, 'POINT') + ' км'}"></span></li>
+                <li class="list-group-item"><strong>Цена:</strong> <span th:text="${#numbers.formatInteger(carAd.price, 1, 'POINT') + ' $'}"></span></li>
+                <li class="list-group-item"><strong>Описание:</strong> <span th:text="${carAd.description}"></span></li>
+            </ul>
+        </div>
     </div>
 </div>
 

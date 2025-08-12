@@ -12,7 +12,6 @@ import com.example.websiteauto.entity.User;
 import com.example.websiteauto.entity.enums.BodyType;
 import com.example.websiteauto.entity.enums.DriveType;
 import com.example.websiteauto.entity.enums.EngineType;
-import com.example.websiteauto.repositories.CarAdRepository;
 import com.example.websiteauto.security.CustomUserDetails;
 import com.example.websiteauto.service.CarAdService;
 import jakarta.validation.Valid;
@@ -32,7 +31,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.AccessDeniedException;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/ads")
@@ -41,7 +40,6 @@ public class CarAdViewController {
 
     private final CarAdService carAdService;
     private final CarAdMapper carAdMapper;
-    private final CarAdRepository carAdRepository;
 
     @GetMapping("/create")
     public String showCreateAdForm(Model model) {
@@ -103,11 +101,8 @@ public class CarAdViewController {
 
     @GetMapping("/profile")
     public String showProfile(Model model, @AuthenticationPrincipal CustomUserDetails userDetails,
-                              @RequestParam(required = false) String success,
-                              @RequestParam(required = false) String error,
                               @RequestParam(defaultValue = "0") int page,
                               @RequestParam(defaultValue = "10") int size) {
-        System.out.println("Request for profile with page=" + page + ", size=" + size);
         Pageable pageable = PageRequest.of(page, size);
         User user = userDetails.getUser();
         UserResponse userDto = UserMapper.toResponse(user);
@@ -115,12 +110,7 @@ public class CarAdViewController {
         model.addAttribute("currentPage", page);
         model.addAttribute("user", userDto);
         model.addAttribute("carAds", ads);
-        if (success != null) {
-            model.addAttribute("successMessage", success);
-        }
-        if (error != null) {
-            model.addAttribute("errorMessage", error);
-        }
+        model.addAttribute("totalPages", ads.getTotalPages());
 
         return "profile";
     }
@@ -128,44 +118,18 @@ public class CarAdViewController {
     @PostMapping("/delete/{id}")
     public String deleteAd(@PathVariable Long id,
                            @AuthenticationPrincipal CustomUserDetails userDetails,
-                           RedirectAttributes redirectAttributes) {
-
-        try {
-            // Получаем объявление
-            CarAd ad = carAdService.getCarAdEntityById(id);
-
-            // Проверяем права доступа
-            User currentUser = userDetails.getUser();
-            if (!ad.getAuthor().getId().equals(currentUser.getId())) {
-                throw new AccessDeniedException("Вы не можете удалить это объявление");
-            }
-
-            // Удаляем объявление
-            carAdService.deleteCarAd(id);
-
-            // Добавляем сообщение об успехе
-            redirectAttributes.addFlashAttribute("successMessage", "Объявление успешно удалено");
-
-            // Важно: возвращаем редирект на профиль
-            return "redirect:/ads/profile";
-
-        } catch (Exception e) {
-            // Добавляем сообщение об ошибке
-            redirectAttributes.addFlashAttribute("errorMessage", "Ошибка при удалении: " + e.getMessage());
-            return "redirect:/ads/profile";
-        }
+                           RedirectAttributes redirectAttributes) throws AccessDeniedException {
+        carAdService.deleteCarAd(id, userDetails.getId());
+        redirectAttributes.addFlashAttribute("successMessage", "Объявление успешно удалено");
+        return "redirect:/ads/profile";
     }
 
     @GetMapping("/edit/{id}")
     public String editAdForm(@PathVariable Long id,
                              @AuthenticationPrincipal CustomUserDetails userDetails,
                              Model model) throws AccessDeniedException {
-        CarAd ad = carAdService.getCarAdEntityById(id);
-        User currentUser = userDetails.getUser();
-        if (!ad.getAuthor().getId().equals(currentUser.getId())) {
-            throw new AccessDeniedException("Вы не можете редактировать это объявление");
-        }
-        model.addAttribute("ad", carAdMapper.mapToRequest(ad));
+        CarAdRequest adRequest = carAdService.getCarAdForEdit(id, userDetails.getId());
+        model.addAttribute("ad", adRequest);
         model.addAttribute("id", id);
         return "edit-ad";
     }
@@ -178,25 +142,18 @@ public class CarAdViewController {
                            @AuthenticationPrincipal CustomUserDetails userDetails,
                            Model model,
                            RedirectAttributes redirectAttributes) throws IOException {
-        User currentUser = userDetails.getUser();
-        CarAd existingAd = carAdService.getCarAdEntityById(id);
-        if (!existingAd.getAuthor().getId().equals(currentUser.getId())) {
-            throw new AccessDeniedException("Вы не можете редактировать это объявление");
-        }
-
         if (bindingResult.hasErrors()) {
             model.addAttribute("id", id);
+            model.addAttribute("brands", carAdService.getAllBrands());
+            model.addAttribute("models", carAdService.getAllModels());
+            model.addAttribute("years", carAdService.getAllYears());
             return "edit-ad";
         }
 
-        try {
-            carAdService.updateCarAd(id, request, images);
-            redirectAttributes.addFlashAttribute("successMessage", "Объявление успешно обновлено");
-            return "redirect:/ads/profile";
-        } catch (Exception e) {
-            model.addAttribute("error", "Ошибка при обновлении объявления");
-            model.addAttribute("id", id);
-            return "edit-ad";
-        }
+        carAdService.updateCarAd(id, request, images, userDetails.getId());
+
+        redirectAttributes.addFlashAttribute("successMessage", "Объявление успешно обновлено");
+        return "redirect:/ads/profile";
     }
 }
+

@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -82,6 +83,15 @@ public class CarAdService {
         return carAdMapper.mapToAdResponse(savedAd);
     }
 
+    @Transactional
+    public CarAdRequest getCarAdForEdit(Long adId, Long currentUserId) throws AccessDeniedException {
+        CarAd ad = carAdRepository.findById(adId)
+                .orElseThrow(() -> new CarAdNotFoundException(adId));
+        if (!ad.getAuthor().getId().equals(currentUserId)) {
+            throw new AccessDeniedException("У вас нет прав для редактирования этого объявления.");
+        }
+        return carAdMapper.mapToRequest(ad);
+    }
 
     @Transactional(readOnly = true)
     public CarAd getCarAdEntityById(Long id) {
@@ -105,13 +115,14 @@ public class CarAdService {
     }
 
     @Transactional
-    public CarAdResponse updateCarAd(Long id, CarAdRequest request, List<MultipartFile> images) throws IOException {
-        Optional<CarAd> optionalAd = carAdRepository.findById(id);
-        if (optionalAd.isEmpty()) {
-            throw new CarAdNotFoundException(id);
+    public void updateCarAd(Long id, CarAdRequest request, List<MultipartFile> images, Long currentUserId) throws IOException {
+        CarAd ad = carAdRepository.findById(id).orElseThrow(() -> new CarAdNotFoundException(id));
+
+        if (!ad.getAuthor().getId().equals(currentUserId)) {
+            throw new AccessDeniedException("У вас нет прав для редактирования этого объявления.");
         }
 
-        CarAd ad = optionalAd.get();
+
         ad.setTitle(request.title());
         ad.setDescription(request.description());
         ad.setMileage(request.mileage());
@@ -132,8 +143,7 @@ public class CarAdService {
             ad.setImagePaths(saveImages(images));
         }
 
-        CarAd updatedAd = carAdRepository.save(ad);
-        return carAdMapper.mapToAdResponse(updatedAd);
+        carAdRepository.save(ad);
     }
 
     private List<String> saveImages(List<MultipartFile> images) throws IOException {
@@ -153,11 +163,12 @@ public class CarAdService {
     }
 
     @Transactional
-    public void deleteCarAd(Long id) {
+    public void deleteCarAd(Long id, Long currentUser) throws AccessDeniedException {
         CarAd ad = carAdRepository.findById(id)
                 .orElseThrow(() -> new CarAdNotFoundException(id));
-
-        ad.setAuthor(null);
+        if (!ad.getAuthor().getId().equals(currentUser)) {
+            throw new AccessDeniedException("Вы не можете удалить это объявление");
+        }
         carAdRepository.delete(ad);
     }
 

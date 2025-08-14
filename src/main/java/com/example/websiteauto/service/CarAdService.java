@@ -51,7 +51,7 @@ public class CarAdService {
     }
 
     @Transactional
-    public void createCarAd(CarAdRequest request, Long authorId, List<MultipartFile> images) throws IOException {
+    public CarAdResponse createCarAd(CarAdRequest request, Long authorId, List<MultipartFile> images) throws IOException {
         User author = userRepository.findById(authorId)
                 .orElseThrow(() -> new UserNotFoundException(authorId));
 
@@ -65,6 +65,7 @@ public class CarAdService {
         carAd.setImagePaths(saveImages(images));
 
         carAdRepository.save(carAd);
+        return carAdMapper.toAdResponse(carAd);
     }
 
     @Transactional
@@ -99,24 +100,25 @@ public class CarAdService {
     }
 
     @Transactional
-    public void updateCarAd(Long id, CarAdRequest request, List<MultipartFile> images, Long currentUserId) throws IOException {
-        CarAd ad = carAdRepository.findById(id).orElseThrow(() -> new CarAdNotFoundException(id));
+    public CarAdResponse updateCarAd(Long id, CarAdRequest request, List<MultipartFile> images, Long currentUserId) throws IOException {
+        CarAd carAd = carAdRepository.findById(id).orElseThrow(() -> new CarAdNotFoundException(id));
 
-        if (!ad.getAuthor().getId().equals(currentUserId)) {
+        if (!carAd.getAuthor().getId().equals(currentUserId)) {
             throw new AccessDeniedException("У вас нет прав для редактирования этого объявления.");
         }
 
-        ad.setTitle(request.title());
-        ad.setDescription(request.description());
-        ad.setMileage(request.mileage());
-        ad.setPrice(request.price());
+        carAd.setTitle(request.title());
+        carAd.setDescription(request.description());
+        carAd.setMileage(request.mileage());
+        carAd.setPrice(request.price());
 
-        Car car = ad.getCar();
+        Car car = carAd.getCar();
         carAdMapper.updateCarFromDto(request.car(), car);
 
         if (images != null && !images.isEmpty()) {
-            ad.setImagePaths(saveImages(images));
+            carAd.setImagePaths(saveImages(images));
         }
+        return carAdMapper.toAdResponse(carAd);
     }
 
     private List<String> saveImages(List<MultipartFile> images) throws IOException {

@@ -12,7 +12,6 @@ import com.example.websiteauto.entity.enums.DriveType;
 import com.example.websiteauto.entity.enums.EngineType;
 import com.example.websiteauto.security.CustomUserDetails;
 import com.example.websiteauto.service.CarAdService;
-import com.example.websiteauto.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

@@ -28,7 +28,6 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -52,35 +51,20 @@ public class CarAdService {
     }
 
     @Transactional
-    public CarAdResponse createCarAd(CarAdRequest request, Long authorId, List<MultipartFile> images) throws IOException {
+    public void createCarAd(CarAdRequest request, Long authorId, List<MultipartFile> images) throws IOException {
         User author = userRepository.findById(authorId)
                 .orElseThrow(() -> new UserNotFoundException(authorId));
 
-        Car car = new Car();
-        car.setBrand(request.car().brand());
-        car.setModel(request.car().model());
-        car.setYear(request.car().year());
-        car.setBodyType(request.car().bodyType());
-        car.setEngineType(request.car().engineType());
-        car.setEnginePower(request.car().enginePower());
-        car.setHorsePower(request.car().horsePower());
-        car.setDriveType(request.car().driveType());
-        car.setColor(request.car().color());
-
+        Car car = carAdMapper.toCar(request.car());
         Car savedCar = carRepository.save(car);
+        CarAd carAd = carAdMapper.toEntity(request);
 
-        CarAd ad = new CarAd();
-        ad.setTitle(request.title());
-        ad.setDescription(request.description());
-        ad.setCar(savedCar);
-        ad.setAuthor(author);
-        ad.setMileage(request.mileage());
-        ad.setPrice(request.price());
-        ad.setCreatedAt(LocalDateTime.now());
-        ad.setImagePaths(saveImages(images));
+        carAd.setCar(savedCar);
+        carAd.setAuthor(author);
+        carAd.setCreatedAt(LocalDateTime.now());
+        carAd.setImagePaths(saveImages(images));
 
-        CarAd savedAd = carAdRepository.save(ad);
-        return carAdMapper.mapToAdResponse(savedAd);
+        carAdRepository.save(carAd);
     }
 
     @Transactional
@@ -90,7 +74,7 @@ public class CarAdService {
         if (!ad.getAuthor().getId().equals(currentUserId)) {
             throw new AccessDeniedException("У вас нет прав для редактирования этого объявления.");
         }
-        return carAdMapper.mapToRequest(ad);
+        return carAdMapper.toRequest(ad);
     }
 
     @Transactional(readOnly = true)
@@ -102,7 +86,7 @@ public class CarAdService {
     @Transactional(readOnly = true)
     public CarAdResponse getCarAdResponseById(Long id) {
         CarAd ad = getCarAdEntityById(id);
-        return carAdMapper.mapToAdResponse(ad);
+        return carAdMapper.toAdResponse(ad);
     }
 
 
@@ -110,7 +94,7 @@ public class CarAdService {
     public List<CarAdResponse> getAllCarAds() {
         List<CarAd> ads = carAdRepository.findAll();
         return ads.stream()
-                .map(carAdMapper::mapToAdResponse)
+                .map(carAdMapper::toAdResponse)
                 .collect(java.util.stream.Collectors.toList());
     }
 
@@ -122,28 +106,17 @@ public class CarAdService {
             throw new AccessDeniedException("У вас нет прав для редактирования этого объявления.");
         }
 
-
         ad.setTitle(request.title());
         ad.setDescription(request.description());
         ad.setMileage(request.mileage());
         ad.setPrice(request.price());
 
         Car car = ad.getCar();
-        car.setBrand(request.car().brand());
-        car.setModel(request.car().model());
-        car.setYear(request.car().year());
-        car.setBodyType(request.car().bodyType());
-        car.setEngineType(request.car().engineType());
-        car.setEnginePower(request.car().enginePower());
-        car.setHorsePower(request.car().horsePower());
-        car.setDriveType(request.car().driveType());
-        car.setColor(request.car().color());
+        carAdMapper.updateCarFromDto(request.car(), car);
 
         if (images != null && !images.isEmpty()) {
             ad.setImagePaths(saveImages(images));
         }
-
-        carAdRepository.save(ad);
     }
 
     private List<String> saveImages(List<MultipartFile> images) throws IOException {
@@ -176,7 +149,7 @@ public class CarAdService {
     public Page<CarAdResponse> search(CarAdFilter filter, Pageable pageable) {
         Specification<CarAd> spec = CarAdSpecification.withFilter(filter);
         return carAdRepository.findAll(spec, pageable)
-                .map(carAdMapper::mapToAdResponse);
+                .map(carAdMapper::toAdResponse);
     }
 
     public List<String> getAllBrands() {
@@ -195,6 +168,6 @@ public class CarAdService {
         Specification<CarAd> spec = (root, query, cb) -> cb.equal(root.get("author").get("id"), authorId);
         Page<CarAd> carAds = carAdRepository.findAll(spec, pageable);
         System.out.println("Found " + carAds.getTotalElements() + " ads for author " + authorId); // Отладка
-        return carAds.map(carAdMapper::mapToAdResponse);
+        return carAds.map(carAdMapper::toAdResponse);
     }
 }

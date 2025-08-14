@@ -2,18 +2,17 @@ package com.example.websiteauto.controllers;
 
 import com.example.websiteauto.dto.CarAdFilter;
 import com.example.websiteauto.dto.CarDto;
-import com.example.websiteauto.dto.mapper.CarAdMapper;
 import com.example.websiteauto.dto.mapper.UserMapper;
 import com.example.websiteauto.dto.request.CarAdRequest;
 import com.example.websiteauto.dto.response.CarAdResponse;
 import com.example.websiteauto.dto.response.UserResponse;
-import com.example.websiteauto.entity.CarAd;
 import com.example.websiteauto.entity.User;
 import com.example.websiteauto.entity.enums.BodyType;
 import com.example.websiteauto.entity.enums.DriveType;
 import com.example.websiteauto.entity.enums.EngineType;
 import com.example.websiteauto.security.CustomUserDetails;
 import com.example.websiteauto.service.CarAdService;
+import com.example.websiteauto.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,7 +30,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.AccessDeniedException;
 import java.util.List;
-import java.util.Optional;
 
 @Controller
 @RequestMapping("/ads")
@@ -39,7 +37,7 @@ import java.util.Optional;
 public class CarAdViewController {
 
     private final CarAdService carAdService;
-    private final CarAdMapper carAdMapper;
+    private final UserMapper userMapper;
 
     @GetMapping("/create")
     public String showCreateAdForm(Model model) {
@@ -105,7 +103,7 @@ public class CarAdViewController {
                               @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
         User user = userDetails.getUser();
-        UserResponse userDto = UserMapper.toResponse(user);
+        UserResponse userDto = userMapper.userToUserResponse(user);
         Page<CarAdResponse> ads = carAdService.findAdsByAuthorId(user.getId(), pageable);
         model.addAttribute("currentPage", page);
         model.addAttribute("user", userDto);

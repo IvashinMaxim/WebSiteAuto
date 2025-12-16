@@ -32,14 +32,15 @@
   <div class="auth-container">
     <h2 class="text-center mb-4">Создание аккаунта</h2>
 
-<!--    &lt;!&ndash; Ошибки уровня формы &ndash;&gt;-->
-<!--    <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">-->
-<!--      <ul>-->
-<!--        <li th:each="err : ${#fields.globalErrors()}" th:text="${err}"></li>-->
-<!--      </ul>-->
-<!--    </div>-->
-
     <form th:action="@{/register}" th:object="${user}" method="post" novalidate>
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+      <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+        <ul>
+          <li th:each="err : ${#fields.globalErrors()}" th:text="${err}"></li>
+        </ul>
+      </div>
+
       <div class="mb-3">
         <label for="username" class="form-label">
           <i class="bi bi-person"></i> Имя пользователя
@@ -94,26 +95,25 @@
         <div class="form-text">Минимум 8 символов, включая цифры и буквы</div>
       </div>
 
-<!--      &lt;!&ndash; Подтверждение пароля &ndash;&gt;-->
-<!--      <div class="mb-4">-->
-<!--        <label for="confirmPassword" class="form-label">-->
-<!--          <i class="bi bi-lock-fill"></i> Подтвердите пароль-->
-<!--        </label>-->
-<!--        <div class="position-relative">-->
-<!--          <input type="password"-->
-<!--                 class="form-control"-->
-<!--                 th:classappend="${#fields.hasErrors('confirmPassword')} ? 'is-invalid'"-->
-<!--                 id="confirmPassword"-->
-<!--                 th:field="*{confirmPassword}"-->
-<!--                 placeholder="Повторите пароль"-->
-<!--                 required>-->
-<!--          <i class="bi bi-eye-slash password-toggle"-->
-<!--             onclick="togglePassword('confirmPassword')"></i>-->
-<!--        </div>-->
-<!--        <div class="invalid-feedback" th:if="${#fields.hasErrors('confirmPassword')}">-->
-<!--          <span th:errors="*{confirmPassword}"></span>-->
-<!--        </div>-->
-<!--      </div>-->
+      <div class="mb-4">
+        <label for="confirmPassword" class="form-label">
+          <i class="bi bi-lock-fill"></i> Подтвердите пароль
+        </label>
+        <div class="position-relative">
+          <input type="password"
+                 class="form-control"
+                 th:classappend="${#fields.hasErrors('confirmPassword')} ? 'is-invalid'"
+                 id="confirmPassword"
+                 th:field="*{confirmPassword}"
+                 placeholder="Повторите пароль"
+                 required>
+          <i class="bi bi-eye-slash password-toggle"
+             onclick="togglePassword('confirmPassword')"></i>
+        </div>
+        <div class="invalid-feedback" th:if="${#fields.hasErrors('confirmPassword')}">
+          <span th:errors="*{confirmPassword}"></span>
+        </div>
+      </div>
 
       <button type="submit" class="btn btn-primary w-100 py-2 mb-3">
         Зарегистрироваться
@@ -127,6 +127,7 @@
 </div>
 
 <script>
+  // JavaScript для переключения видимости пароля (Оставлен без изменений)
   function togglePassword(fieldId) {
     const field = document.getElementById(fieldId);
     const icon = field.nextElementSibling;
@@ -140,6 +141,7 @@
     }
   }
 
+  // JavaScript для Bootstrap-валидации (Оставлен без изменений)
   document.querySelector('form').addEventListener('submit', function(event) {
     if (!this.checkValidity()) {
       event.preventDefault();

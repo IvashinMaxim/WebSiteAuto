@@ -18,7 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "car_ad")
+@Table(name = "car_ads")
 public class CarAd {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,25 +27,47 @@ public class CarAd {
     private String title;
     private String description;
 
-    @ManyToOne
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    private BigDecimal price;
+    private Integer views;
+    private Integer mileage;
+    private String color;
+    private String city;
+    private String region;
+    @Column(name = "macroregion")
+    private String macroRegion;
+    private String notes;
+    private String owner;
+    @Column(name = "owners")
+    private String numberOfOwners;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User author;
 
-    @ManyToOne(
-            cascade = {CascadeType.PERSIST, CascadeType.MERGE},
-            optional = false
-    )
-    @JoinColumn(name = "car_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "car_id", nullable = false)
     private Car car;
 
 
-    private int mileage;
-    private BigDecimal price;
-    private LocalDateTime createdAt;
+    @OneToMany(
+            mappedBy = "carAd",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<Image> images;
 
-    @ElementCollection
-    @CollectionTable(name = "car_ad_images", joinColumns = @JoinColumn(name = "car_ad_id"))
-    @Column(name = "image_path")
-    private List<String> imagePaths;
+    public void addImage(Image image) {
+        images.add(image);
+        image.setCarAd(this);
+    }
+
+    public void removeImage(Image image) {
+        images.remove(image);
+        image.setCarAd(null);
+    }
 
     @PrePersist
     protected void onCreate() {

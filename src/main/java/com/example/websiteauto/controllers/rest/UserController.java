@@ -19,4 +19,10 @@ public class UserController {
     public UserResponse registerUser(@RequestBody @Valid UserRegistrationRequest request) {
         return userService.registerUser(request);
     }
+
+    @GetMapping("/user/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public UserResponse getUserById(@PathVariable Long id) {
+        return userService.getUserById(id);
+    }
 }

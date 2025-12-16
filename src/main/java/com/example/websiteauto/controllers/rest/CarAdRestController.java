@@ -6,56 +6,87 @@ import com.example.websiteauto.security.CustomUserDetails;
 import com.example.websiteauto.service.CarAdService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.example.websiteauto.dto.CarAdFilter;
 
 import java.io.IOException;
-import java.nio.file.AccessDeniedException;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/ads")
 @RequiredArgsConstructor
 public class CarAdRestController {
+
     private final CarAdService carAdService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CarAdResponse createCarAd(@RequestBody @Valid CarAdRequest request,
-                                     @AuthenticationPrincipal CustomUserDetails customUserDetails,
-                                     @RequestParam("images") List<MultipartFile> images) throws IOException {
-        Long authorId = customUserDetails.getId();
-        return carAdService.createCarAd(request, authorId, images);
+    public CarAdResponse create(
+            @Valid @RequestBody CarAdRequest request,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        Long id = carAdService.createCarAd(request, user.getId());
+        return carAdService.getCarAdResponse(id);
+    }
+
+    @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<String> uploadImages(
+            @PathVariable Long id,
+            @RequestPart("images") List<MultipartFile> images,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) throws IOException {
+        return carAdService.addImages(id, user.getId(), images);
     }
 
     @GetMapping
-    @ResponseStatus(HttpStatus.OK)
-    public List<CarAdResponse> getAllAds() {
-        return carAdService.getAllCarAds();
+    public Page<CarAdResponse> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            CarAdFilter filter
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return carAdService.search(filter, pageable);
     }
 
     @GetMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    public CarAdResponse getAdById(@PathVariable Long id) {
-        return carAdService.getCarAdResponseById(id);
+    public CarAdResponse getById(@PathVariable Long id) {
+        return carAdService.getCarAdResponse(id);
     }
 
-    @PutMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    public CarAdResponse updateCarAd(@PathVariable Long id, @RequestBody @Valid CarAdRequest request,
-                                     @RequestParam("images") List<MultipartFile> images,
-                                     @AuthenticationPrincipal CustomUserDetails customUserDetails) throws IOException {
-        return carAdService.updateCarAd(id, request, images, customUserDetails.getId());
+    @PatchMapping("/{id}")
+    public CarAdResponse update(
+            @PathVariable Long id,
+            @Valid @RequestBody CarAdRequest request,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        carAdService.updateCarAd(id, request, user.getId());
+        return carAdService.getCarAdResponse(id);
+    }
+
+    @DeleteMapping("/{id}/images/{imageId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteImage(
+            @PathVariable Long id,
+            @PathVariable Long imageId,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        carAdService.deleteImage(id, imageId, user.getId());
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteAd(@PathVariable Long id,
-                         @AuthenticationPrincipal CustomUserDetails customUserDetails) throws AccessDeniedException {
-        carAdService.deleteCarAd(id, customUserDetails.getId());
+    public void delete(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        carAdService.deleteCarAd(id, user.getId());
     }
-
-
 }

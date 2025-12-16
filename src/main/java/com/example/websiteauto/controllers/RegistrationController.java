@@ -1,6 +1,7 @@
 package com.example.websiteauto.controllers;
 
 import com.example.websiteauto.dto.request.UserRegistrationRequest;
+import com.example.websiteauto.service.AuthService;
 import com.example.websiteauto.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +18,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequiredArgsConstructor
 public class RegistrationController {
     private final UserService userService;
+    private final AuthService authService;
 
     @GetMapping
     public String showRegistrationForm(Model model) {
-        model.addAttribute("user", new UserRegistrationRequest("", "", ""));
+        model.addAttribute("user", new UserRegistrationRequest());
         return "register";
     }
 
@@ -32,6 +34,8 @@ public class RegistrationController {
         }
 
         userService.registerUser(request);
+
+        authService.autoLogin(request.getUsername(), request.getPassword());
         return "redirect:/ads";
     }
 }

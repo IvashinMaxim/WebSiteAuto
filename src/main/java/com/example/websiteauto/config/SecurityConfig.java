@@ -1,13 +1,13 @@
 package com.example.websiteauto.config;
 
-
-import com.example.websiteauto.security.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -16,15 +16,17 @@ import org.springframework.security.web.SecurityFilterChain;
 @RequiredArgsConstructor
 @EnableWebSecurity
 public class SecurityConfig {
-    private final CustomUserDetailsService customUserDetailsService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
+        http.
+                securityContext(context -> context.requireExplicitSave(false))
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/ads/create", "/ads/edit/**", "/ads/delete/**","ads/profile").authenticated()
-                        .requestMatchers("/ads" ,"/ads/**", "/login", "/register", "/css/**", "/js/**","uploads/**").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/ads/create", "/ads/edit/**", "/ads/delete/**", "/ads/profile").authenticated()
+                        .anyRequest().permitAll()
                 )
                 .formLogin(form -> form
                         .loginPage("/login")
@@ -41,6 +43,10 @@ public class SecurityConfig {
         return http.build();
     }
 
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+        return configuration.getAuthenticationManager();
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {

@@ -7,45 +7,54 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class CarAdSpecification {
     public static Specification<CarAd> withFilter(CarAdFilter filter) {
         return (root, query, cb) -> {
             Join<CarAd, Car> carJoin = root.join("car");
-            Predicate predicate = cb.conjunction();
 
-            if (filter.brand() != null && !filter.brand().isEmpty()) {
-                predicate = cb.and(predicate, cb.equal(carJoin.get("brand"), filter.brand()));
+            query.distinct(true);
+
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (filter.getBrand() != null && !filter.getBrand().isEmpty()) {
+                predicates.add(cb.equal(carJoin.get("brand"), filter.getBrand()));
             }
-            if (filter.model() != null && !filter.model().isEmpty()) {
-                predicate = cb.and(predicate, cb.equal(carJoin.get("model"), filter.model()));
+            if (filter.getModel() != null && !filter.getModel().isEmpty()) {
+                predicates.add(cb.equal(carJoin.get("model"), filter.getModel()));
             }
-            if (filter.minYear() != null) {
-                predicate = cb.and(predicate, cb.greaterThanOrEqualTo(carJoin.get("year"), filter.minYear()));
+            if (filter.getMinYear() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(carJoin.get("yearLow"), filter.getMinYear()));
             }
-            if (filter.maxYear() != null) {
-                predicate = cb.and(predicate, cb.lessThanOrEqualTo(carJoin.get("year"), filter.maxYear()));
+            if (filter.getMaxYear() != null) {
+                predicates.add(cb.lessThanOrEqualTo(carJoin.get("yearUpp"), filter.getMaxYear()));
             }
-            if (filter.minMileage() != null) {
-                predicate = cb.and(predicate, cb.greaterThanOrEqualTo(root.get("mileage"), filter.minMileage()));
+
+            if (filter.getMinMileage() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("mileage"), filter.getMinMileage()));
             }
-            if (filter.maxMileage() != null) {
-                predicate = cb.and(predicate, cb.lessThanOrEqualTo(root.get("mileage"), filter.maxMileage()));
+            if (filter.getMaxMileage() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("mileage"), filter.getMaxMileage()));
             }
-            if (filter.minPrice() != null) {
-                predicate = cb.and(predicate, cb.greaterThanOrEqualTo(root.get("price"), filter.minPrice()));
+
+            if (filter.getMinPrice() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("price"), filter.getMinPrice()));
             }
-            if (filter.maxPrice() != null) {
-                predicate = cb.and(predicate, cb.lessThanOrEqualTo(root.get("price"), filter.maxPrice()));
+            if (filter.getMaxPrice() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("price"), filter.getMaxPrice()));
             }
-            if (filter.keyword() != null && !filter.keyword().isEmpty()) {
-                predicate = cb.and(predicate, cb.or(
-                        cb.like(cb.lower(root.get("title")), "%" + filter.keyword().toLowerCase() + "%"),
-                        cb.like(cb.lower(root.get("description")), "%" + filter.keyword().toLowerCase() + "%")
+
+            if (filter.getKeyword() != null && !filter.getKeyword().isEmpty()) {
+                String pattern = "%" + filter.getKeyword().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("title")), pattern),
+                        cb.like(cb.lower(root.get("description")), pattern)
                 ));
             }
 
-            return predicate;
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
-
 }

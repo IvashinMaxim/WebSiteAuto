@@ -1,31 +1,32 @@
 package com.example.websiteauto.repositories;
 
-import com.example.websiteauto.dto.response.CarAdResponse;
 import com.example.websiteauto.entity.CarAd;
-import com.example.websiteauto.entity.User;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
-public interface CarAdRepository extends JpaRepository<CarAd, Long> , JpaSpecificationExecutor<CarAd> {
+public interface CarAdRepository extends JpaRepository<CarAd, Long>, JpaSpecificationExecutor<CarAd>, CarAdRepositoryCustom {
 
-    @Query("SELECT DISTINCT c.car.brand FROM CarAd c WHERE c.car.brand IS NOT NULL")
+    @Query("SELECT DISTINCT ca FROM CarAd ca " +
+           "LEFT JOIN FETCH ca.car " +
+           "LEFT JOIN FETCH ca.author " +
+           "WHERE ca.id IN :ids")
+    List<CarAd> findAllByIdsWithRelations(@Param("ids") List<Long> ids);
+
+    @Query("SELECT DISTINCT ca.car.brand FROM CarAd ca")
     List<String> findDistinctBrands();
 
-    @Query("SELECT DISTINCT c.car.model FROM CarAd c WHERE c.car.model IS NOT NULL")
+    @Query("SELECT DISTINCT ca.car.model FROM CarAd ca")
     List<String> findDistinctModels();
 
-    @Query("SELECT DISTINCT c.car.year FROM CarAd c WHERE c.car.year IS NOT NULL")
+    @Query("SELECT DISTINCT ca.car.yearLow FROM CarAd ca WHERE ca.car.yearLow IS NOT NULL ORDER BY ca.car.yearLow DESC")
     List<Integer> findDistinctYears();
 
-
-    List<CarAd> findAllByAuthor(User user);
-    Page<CarAd> findAllByAuthor(User author, Pageable pageable);
+    @Query("SELECT DISTINCT ca.car.model FROM CarAd ca WHERE ca.car.brand = :brand ORDER BY ca.car.model")
+    List<String> findModelsByBrand(@Param("brand") String brand);
 }

@@ -2,10 +2,13 @@ package com.example.websiteauto.service;
 
 import com.example.websiteauto.dto.CarAdFilter;
 import com.example.websiteauto.dto.mapper.CarAdMapper;
+import com.example.websiteauto.dto.mapper.CarMapper;
 import com.example.websiteauto.dto.request.CarAdRequest;
+import com.example.websiteauto.dto.request.CarDtoRequest;
 import com.example.websiteauto.dto.response.CarAdResponse;
 import com.example.websiteauto.entity.Car;
 import com.example.websiteauto.entity.CarAd;
+import com.example.websiteauto.entity.Image;
 import com.example.websiteauto.entity.User;
 import com.example.websiteauto.exception.CarAdNotFoundException;
 import com.example.websiteauto.exception.UserNotFoundException;
@@ -13,7 +16,10 @@ import com.example.websiteauto.repositories.CarAdRepository;
 import com.example.websiteauto.repositories.CarRepository;
 import com.example.websiteauto.repositories.UserRepository;
 import com.example.websiteauto.repositories.specification.CarAdSpecification;
+import jakarta.validation.Valid;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -21,33 +27,34 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+
+import org.springframework.security.access.AccessDeniedException;
+
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class CarAdService {
 
+    private final CarService carService;
     private final CarAdRepository carAdRepository;
     private final CarRepository carRepository;
     private final UserRepository userRepository;
     private final CarAdMapper carAdMapper;
-    private final String uploadDir;
+    private final CarMapper carMapper;
+    private final ImageService imageService;
 
-    public CarAdService(CarAdRepository carAdRepository,
+    public CarAdService(CarService carService, CarAdRepository carAdRepository,
                         CarRepository carRepository,
                         UserRepository userRepository,
-                        CarAdMapper carAdMapper) {
+                        CarAdMapper carAdMapper, CarMapper carMapper, ImageService imageService) {
+        this.carService = carService;
         this.carAdRepository = carAdRepository;
         this.carRepository = carRepository;
         this.userRepository = userRepository;
         this.carAdMapper = carAdMapper;
-        this.uploadDir = System.getProperty("user.dir") + "/src/main/resources/static/images/";
+        this.carMapper = carMapper;
+        this.imageService = imageService;
     }
 
     @Transactional
@@ -55,27 +62,39 @@ public class CarAdService {
         User author = userRepository.findById(authorId)
                 .orElseThrow(() -> new UserNotFoundException(authorId));
 
-        Car car = carAdMapper.toCar(request.car());
-        Car savedCar = carRepository.save(car);
-        CarAd carAd = carAdMapper.toEntity(request);
+        Car car = new Car();
+        carMapper.updateCarFromDto(request.getCar(), car);
+        car.setRealnessOfCar(false);
 
-        carAd.setCar(savedCar);
+        CarAd carAd = carAdMapper.toEntity(request);
+        carAd.setCar(car);
         carAd.setAuthor(author);
         carAd.setCreatedAt(LocalDateTime.now());
-        carAd.setImagePaths(saveImages(images));
+
+        if (images != null && !images.isEmpty()) {
+            List<Image> imageList = imageService.createAndSaveImages(images, carAd);
+            carAd.setImages(imageList);
+        }
 
         carAdRepository.save(carAd);
         return carAdMapper.toAdResponse(carAd);
     }
 
-    @Transactional
-    public CarAdRequest getCarAdForEdit(Long adId, Long currentUserId) throws AccessDeniedException {
+    @Transactional(readOnly = true)
+    public CarAdRequest getCarAdForEdit(Long adId, Long currentUserId) {
         CarAd ad = carAdRepository.findById(adId)
                 .orElseThrow(() -> new CarAdNotFoundException(adId));
         if (!ad.getAuthor().getId().equals(currentUserId)) {
-            throw new AccessDeniedException("У вас нет прав для редактирования этого объявления.");
+            throw new AccessDeniedException("У пользователя нет прав для редактирования объявления с ID: \" + adId");
         }
-        return carAdMapper.toRequest(ad);
+        return carAdMapper.toAdRequest(ad);
+    }
+
+    @Transactional(readOnly = true)
+    public CarAdResponse getCarAdResponse(Long adId) {
+        CarAd ad = carAdRepository.findById(adId)
+                .orElseThrow(() -> new CarAdNotFoundException(adId));
+        return carAdMapper.toAdResponse(ad);
     }
 
     @Transactional(readOnly = true)
@@ -83,13 +102,6 @@ public class CarAdService {
         return carAdRepository.findById(id)
                 .orElseThrow(() -> new CarAdNotFoundException(id));
     }
-
-    @Transactional(readOnly = true)
-    public CarAdResponse getCarAdResponseById(Long id) {
-        CarAd ad = getCarAdEntityById(id);
-        return carAdMapper.toAdResponse(ad);
-    }
-
 
     @Transactional(readOnly = true)
     public List<CarAdResponse> getAllCarAds() {
@@ -100,41 +112,46 @@ public class CarAdService {
     }
 
     @Transactional
-    public CarAdResponse updateCarAd(Long id, CarAdRequest request, List<MultipartFile> images, Long currentUserId) throws IOException {
-        CarAd carAd = carAdRepository.findById(id).orElseThrow(() -> new CarAdNotFoundException(id));
+    public CarAdResponse updateCarAd(Long adId, CarAdRequest request, List<MultipartFile> images, Long currentUserId) throws IOException {
+        CarAd carAd = carAdRepository.findById(adId).orElseThrow(() -> new CarAdNotFoundException(adId));
 
         if (!carAd.getAuthor().getId().equals(currentUserId)) {
             throw new AccessDeniedException("У вас нет прав для редактирования этого объявления.");
         }
 
-        carAd.setTitle(request.title());
-        carAd.setDescription(request.description());
-        carAd.setMileage(request.mileage());
-        carAd.setPrice(request.price());
+        Car oldCar = carAd.getCar();
+        CarDtoRequest carDto = request.getCar();
 
-        Car car = carAd.getCar();
-        carAdMapper.updateCarFromDto(request.car(), car);
+        if (oldCar.getRealnessOfCar()) {
+            if (carService.carChanged(oldCar, carDto)) {
+                Car newFakeCar = Car.cloneAsFake(oldCar);
+                carMapper.updateCarFromDto(carDto, newFakeCar);
+                carRepository.save(newFakeCar);
+                carAd.setCar(newFakeCar);
+            }
+
+        } else {
+            carMapper.updateCarFromDto(carDto, oldCar);
+        }
+        carAdMapper.updateAdFromRequest(request, carAd);
+
+        List<Long> idsToDelete = request.getRemoveImageIds();
+        if (idsToDelete != null && !idsToDelete.isEmpty()) {
+            carAd.getImages().removeIf(image -> {
+                if (idsToDelete.contains(image.getId())) {
+                    imageService.deleteImageFile();
+                    return true;
+                }
+                return false;
+            });
+        }
+
 
         if (images != null && !images.isEmpty()) {
-            carAd.setImagePaths(saveImages(images));
+            List<Image> newImages = imageService.createAndSaveImages(images, carAd);
+            carAd.getImages().addAll(newImages);
         }
         return carAdMapper.toAdResponse(carAd);
-    }
-
-    private List<String> saveImages(List<MultipartFile> images) throws IOException {
-        List<String> imagePaths = new ArrayList<>();
-        if (images != null) {
-            for (MultipartFile image : images) {
-                if (!image.isEmpty()) {
-                    String fileName = UUID.randomUUID().toString() + "_" + image.getOriginalFilename();
-                    Path path = Paths.get(uploadDir, fileName);
-                    Files.createDirectories(path.getParent());
-                    image.transferTo(path.toFile());
-                    imagePaths.add("/uploads/" + fileName);
-                }
-            }
-        }
-        return imagePaths;
     }
 
     @Transactional
@@ -150,18 +167,33 @@ public class CarAdService {
     @Transactional(readOnly = true)
     public Page<CarAdResponse> search(CarAdFilter filter, Pageable pageable) {
         Specification<CarAd> spec = CarAdSpecification.withFilter(filter);
-        return carAdRepository.findAll(spec, pageable)
-                .map(carAdMapper::toAdResponse);
+
+        Page<Long> pageIds = carAdRepository.findAllIdsBySpecification(spec, pageable);
+
+        if (pageIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        List<CarAd> ads = carAdRepository.findAllByIdsWithRelations(pageIds.getContent());
+
+        List<CarAdResponse> dtoList = ads.stream()
+                .map(carAdMapper::toAdResponse)
+                .toList();
+
+        return new PageImpl<>(dtoList, pageable, pageIds.getTotalElements());
     }
 
+    @Cacheable("brands")
     public List<String> getAllBrands() {
         return carAdRepository.findDistinctBrands();
     }
 
+    @Cacheable("models")
     public List<String> getAllModels() {
         return carAdRepository.findDistinctModels();
     }
 
+    @Cacheable("years")
     public List<Integer> getAllYears() {
         return carAdRepository.findDistinctYears();
     }
@@ -171,5 +203,29 @@ public class CarAdService {
         Page<CarAd> carAds = carAdRepository.findAll(spec, pageable);
         System.out.println("Found " + carAds.getTotalElements() + " ads for author " + authorId); // Отладка
         return carAds.map(carAdMapper::toAdResponse);
+    }
+
+    @Cacheable("modelsByBrand")
+    public List<String> getModelsByBrand(String brand) {
+        return carAdRepository.findModelsByBrand(brand);
+    }
+
+    public List<Object> getDistinctValues(String target, Specification<CarAd> spec) {
+        return carAdRepository.findDistinctValues(target, spec);
+    }
+
+    public Long createCarAd(@Valid CarAdRequest request, Long id) {
+        return null;
+    }
+
+    public List<String> addImages(Long adId, Long userId, List<MultipartFile> images) {
+        return null;
+    }
+
+    public void deleteImage(Long id, Long imageId, Long id1) {
+
+    }
+
+    public void updateCarAd(Long id, @Valid CarAdRequest request, Long userId) {
     }
 }

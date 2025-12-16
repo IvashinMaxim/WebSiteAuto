@@ -1,23 +1,23 @@
 package com.example.websiteauto.security;
 
 import com.example.websiteauto.entity.User;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.*;
 
+@AllArgsConstructor
 @Getter
 public class CustomUserDetails implements UserDetails {
-    private final User user;
 
-    public CustomUserDetails(User user) {
-        this.user = user;
-    }
+    private final User user;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        // Пока ролей нет
+        return Collections.emptyList();
     }
 
     @Override
@@ -27,7 +27,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return user.getEmail();
+        return user.getUsername();  // логинишься по username
     }
 
     @Override

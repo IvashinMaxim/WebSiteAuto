@@ -1,13 +1,29 @@
 package com.example.websiteauto.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class CarAdFilter {
 
-public record CarAdFilter(String brand, String model, Integer minYear, Integer maxYear,
-                          Integer minMileage, Integer maxMileage, BigDecimal minPrice, BigDecimal maxPrice,
-                          String keyword){}
+    private String brand;
+    private String model;
 
+    private Integer minYear;
+    private Integer maxYear;
+
+    private Integer minMileage;
+    private Integer maxMileage;
+
+    private BigDecimal minPrice;
+    private BigDecimal maxPrice;
+
+    private String keyword;
+}

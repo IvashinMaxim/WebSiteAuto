@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
+    <title>Вход</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -18,7 +18,7 @@
             background: white;
             padding: 30px 40px;
             border-radius: 10px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
             width: 100%;
             max-width: 400px;
         }
@@ -69,20 +69,49 @@
         .register-link a:hover {
             text-decoration: underline;
         }
+
+        .message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .logout-message {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
     </style>
 </head>
 <body>
 <div class="login-container">
     <h2>Вход</h2>
+
+    <div th:if="${loginError}" class="message error-message">
+        Неверное имя пользователя или пароль.
+    </div>
+
+    <div th:if="${logoutMessage}" class="message logout-message">
+        Вы успешно вышли из системы.
+    </div>
+
     <form th:action="@{/login}" method="post">
         <label for="username">Имя пользователя</label>
-        <input type="text" name="username" id="username" required />
+        <input type="text" name="username" id="username" autofocus required/>
 
         <label for="password">Пароль</label>
-        <input type="password" name="password" id="password" required />
+        <input type="password" name="password" id="password" required/>
 
         <button type="submit">Войти</button>
     </form>
+
     <div class="register-link">
         Нет аккаунта? <a th:href="@{/register}">Зарегистрироваться</a>
     </div>

@@ -1,26 +1,58 @@
 package com.example.websiteauto.dto.request;
 
-import com.example.websiteauto.dto.CarDto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
-import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.List;
 
-public record CarAdRequest(
-        @NotBlank(message = "Title is required")
-        String title,
-        String description,
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class CarAdRequest {
+    private Long id;
 
-        @NotNull(message = "Car data is required")
-        @Valid
-        CarDto car,
+    @Valid
+    @NotNull
+    private CarDtoRequest car;
 
-        @Positive(message = "Mileage must be positive")
-        int mileage,
+    @Size(max = 50)
+    private String title;
 
-        @DecimalMin(value = "0.0", message = "Цена не может быть отрицательной")
-        @DecimalMax(value = "900000000.0", message = "Цена не может превышать 900,000,000")
-        BigDecimal price
-) implements Serializable {
+    @Size(max = 255)
+    private String description;
+
+    @NotNull(message = "Цена обязательна")
+    @DecimalMin(value = "0.0", message = "Цена не может быть отрицательной")
+    private BigDecimal price;
+
+    @NotNull(message = "Пробег обязателен")
+    @Positive(message = "Пробег должен быть положительным")
+    private Integer mileage;
+
+    @NotBlank(message = "Цвет обязателен")
+    private String color;
+
+    private String owner;
+
+    private String numberOfOwners;
+
+    @NotBlank(message = "Город обязателен")
+    private String city;
+
+    @NotBlank(message = "Регион обязателен")
+    private String region;
+
+    private String macroRegion;
+
+    private String notes;
+
+    private List<Long> existingImageIds;
+
+    private List<Long> removeImageIds;
 }

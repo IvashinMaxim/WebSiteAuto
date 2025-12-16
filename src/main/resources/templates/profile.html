@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,14 +11,15 @@
     <style>
         .profile-header { background-color: #f8f9fa; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; }
         .ad-card { transition: transform 0.2s; margin-bottom: 1.5rem; }
-        .ad-card:hover { transform: translateY(-5px); }
+        .ad-card:hover { transform: translateY(-5px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .ad-image-container { height: 180px; display: flex; align-items: center; justify-content: center; background-color: #e9ecef; overflow: hidden; }
+        .ad-image-container img { max-height: 100%; max-width: 100%; object-fit: contain; }
     </style>
 </head>
 <body>
 <div th:replace="~{fragments/header.html :: header}"></div>
 
 <div class="container my-5">
-    <!-- Сообщения об успехе/ошибке -->
     <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show">
         <span th:text="${successMessage}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -25,22 +29,20 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 
-    <!-- Шапка профиля -->
     <div class="profile-header text-center">
         <div class="d-flex justify-content-center mb-3">
             <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center"
                  style="width: 100px; height: 100px;">
-                <span class="text-white fs-2">Ф</span>
+                <span class="text-white fs-2" th:text="${#strings.substring(user.username, 0, 1)}">Ф</span>
             </div>
         </div>
         <h1 th:text="${user.username}">Username</h1>
         <p class="lead" th:text="${user.email}">user@example.com</p>
     </div>
 
-    <!-- Мои объявления -->
     <h2 class="mb-4">Мои объявления</h2>
 
-    <div th:if="${#lists.isEmpty(carAds)}" class="alert alert-info">
+    <div th:if="${#lists.isEmpty(carAds.content)}" class="alert alert-info">
         У вас пока нет объявлений.
         <a th:href="@{/ads/create}" class="alert-link">Создать первое объявление</a>
     </div>
@@ -48,29 +50,43 @@
     <div class="row">
         <div class="col-md-6 col-lg-4" th:each="ad : ${carAds.content}">
             <div class="card ad-card h-100">
-                <a th:href="@{/ads/{id}(id=${ad.id})}"
+                <a th:href="@{/ads/{id}(id=${ad.id()})}"
                    style="text-decoration: none; color: inherit; display: block;">
-                    <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center"
-                         style="height: 180px;">
-                        <span class="text-white">Изображение автомобиля</span>
+
+                    <div class="ad-image-container card-img-top">
+                        <img th:if="${#lists.isEmpty(ad.images())}"
+                             th:src="@{/images/crying.gif}"
+                             alt="Нет изображения">
+
+                        <img th:unless="${#lists.isEmpty(ad.images())}"
+                             th:src="@{'/images/' + ${ad.images[0].imagePath}}"
+                             alt="Изображение автомобиля">
                     </div>
+
                     <div class="card-body">
-                        <h5 class="card-title" th:text="${ad.title}"></h5>
+                        <h5 class="card-title" th:text="${ad.title()}"></h5>
+                        <h5 class="card-title fw-bold"
+                            th:text="${ad.car().brand() + ' ' + ad.car().model()}">
+                        </h5>
                         <div class="d-flex justify-content-between">
                             <span class="text-success fw-bold"
-                                  th:text="${#numbers.formatInteger(ad.price, 1, 'POINT') + ' $'}"></span>
-                            <span th:text="${#temporals.format(ad.createdAt, 'dd.MM.yyyy')}"></span>
+                                  th:text="${#numbers.formatInteger(ad.price(), 0, 'POINT') + ' Р'}"></span>
+                            <span th:text="${#temporals.format(ad.createdAt(), 'dd.MM.yyyy')}"></span>
                         </div>
                     </div>
                 </a>
-                <div class="card-footer d-flex justify-content-between">
-                    <a th:href="@{/ads/edit/{id}(id=${ad.id})}" class="btn btn-sm btn-outline-warning">
+
+                <div class="card-footer d-flex justify-content-between"
+                     th:if="${ad.authorId() == user.id}">
+
+                    <a th:href="@{/ads/edit/{id}(id=${ad.id()})}" class="btn btn-sm btn-outline-warning">
                         Редактировать
                     </a>
+
                     <button type="button" class="btn btn-sm btn-outline-danger"
                             data-bs-toggle="modal"
                             data-bs-target="#deleteModal"
-                            th:attr="data-ad-id=${ad.id}, data-ad-title=${ad.title}">
+                            th:attr="data-ad-id=${ad.id()}, data-ad-title=${ad.title()}">
                         Удалить
                     </button>
                 </div>
@@ -78,7 +94,6 @@
         </div>
     </div>
 
-    <!-- Модальное окно удаления -->
     <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -100,19 +115,20 @@
         </div>
     </div>
 
-    <!-- Пагинация -->
-    <nav aria-label="Page navigation">
-        <ul class="pagination">
+    <nav aria-label="Page navigation" class="mt-4" th:if="${carAds.totalPages > 1}">
+        <ul class="pagination justify-content-center">
             <li class="page-item" th:classappend="${carAds.first} ? 'disabled'">
-                <a class="page-link" th:href="@{/ads/profile(page=${carAds.number > 0 ? carAds.number - 1 : 0}, size=${carAds.size})}">Предыдущая</a>
+                <a class="page-link" th:href="@{/ads/profile(page=${carAds.number - 1}, size=${carAds.size})}">Предыдущая</a>
             </li>
+
             <li class="page-item" th:each="pageNum : ${#numbers.sequence(0, carAds.totalPages - 1)}"
                 th:classappend="${pageNum == carAds.number} ? 'active'">
                 <a class="page-link" th:href="@{/ads/profile(page=${pageNum}, size=${carAds.size})}"
                    th:text="${pageNum + 1}">1</a>
             </li>
+
             <li class="page-item" th:classappend="${carAds.last} ? 'disabled'">
-                <a class="page-link" th:href="@{/ads/profile(page=${carAds.number < carAds.totalPages - 1 ? carAds.number + 1 : carAds.totalPages - 1}, size=${carAds.size})}">Следующая</a>
+                <a class="page-link" th:href="@{/ads/profile(page=${carAds.number + 1}, size=${carAds.size})}">Следующая</a>
             </li>
         </ul>
     </nav>
@@ -129,10 +145,6 @@
             titleElement.textContent = adTitle;
             const form = deleteModal.querySelector('#deleteForm');
             form.action = `/ads/delete/${adId}`;
-        });
-        deleteModal.addEventListener('hidden.bs.modal', function() {
-            const form = deleteModal.querySelector('#deleteForm');
-            form.reset();
         });
     });
 </script>

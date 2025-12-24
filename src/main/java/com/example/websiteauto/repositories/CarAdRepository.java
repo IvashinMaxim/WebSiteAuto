@@ -1,12 +1,15 @@
 package com.example.websiteauto.repositories;
 
+import com.example.websiteauto.dto.CarRegressionRow;
 import com.example.websiteauto.entity.CarAd;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -29,4 +32,35 @@ public interface CarAdRepository extends JpaRepository<CarAd, Long>, JpaSpecific
 
     @Query("SELECT DISTINCT ca.car.model FROM CarAd ca WHERE ca.car.brand = :brand ORDER BY ca.car.model")
     List<String> findModelsByBrand(@Param("brand") String brand);
+
+    @Query("""
+    SELECT new com.example.websiteauto.dto.CarRegressionRow(
+        ca.price,
+        ca.mileage,
+        c.enginePower,
+        
+        (c.configYearLow + c.configYearUpp) * 1.0 / 2,
+        c.bodyType,
+        ca.color,          
+        ca.owner,          
+        ca.notes,          
+        c.transmission,    
+        c.driveType,       
+        c.steeringSide,    
+        ca.macroRegion,    
+        ca.city            
+    )
+    FROM CarAd ca
+    JOIN ca.car c
+    WHERE ca.price BETWEEN 200000 AND 15000000
+      AND ca.mileage IS NOT NULL
+      AND c.enginePower IS NOT NULL
+      
+      AND c.configYearLow IS NOT NULL
+      AND c.configYearUpp IS NOT NULL
+      AND c.realnessOfCar IS TRUE
+      AND ca.createdAt >= :fromDate
+""")
+    List<CarRegressionRow> findDataForRegression(@Param("fromDate") LocalDateTime fromDate, Pageable pageable);
+
 }

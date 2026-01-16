@@ -4,24 +4,25 @@ import com.example.websiteauto.dto.CarAdFilter;
 import com.example.websiteauto.entity.CarAd;
 import com.example.websiteauto.repositories.specification.CarAdSpecification;
 import com.example.websiteauto.service.CarAdService;
+import com.example.websiteauto.service.CarService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/ads")
 @RequiredArgsConstructor
 public class DictionaryController {
-    private final CarAdService carAdService;
+    private final CarService carService;
 
     @GetMapping("/dictionary")
-    public List<Object> getDictionaryValues(
+    public List<?> getDictionary(
             @RequestParam String target,
-            @ModelAttribute CarAdFilter filter
+            @RequestParam Map<String, String> params
     ) {
-        Specification<CarAd> spec = CarAdSpecification.withFilter(filter);
-        return carAdService.getDistinctValues(target, spec);
+        return carService.searchDictionary(target, params);
     }
 }

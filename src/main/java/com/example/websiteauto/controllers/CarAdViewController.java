@@ -1,6 +1,7 @@
 package com.example.websiteauto.controllers;
 
 import com.example.websiteauto.dto.CarAdFilter;
+import com.example.websiteauto.dto.enums.CarAdSortOrder;
 import com.example.websiteauto.dto.mapper.UserMapper;
 import com.example.websiteauto.dto.request.CarAdRequest;
 import com.example.websiteauto.dto.response.CarAdResponse;
@@ -9,6 +10,7 @@ import com.example.websiteauto.entity.User;
 import com.example.websiteauto.entity.enums.*;
 import com.example.websiteauto.security.CustomUserDetails;
 import com.example.websiteauto.service.CarAdService;
+import com.example.websiteauto.service.CarService;
 import com.example.websiteauto.util.PaginationUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -28,6 +31,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.util.Collections;
 import java.util.List;
 
 @Controller
@@ -36,6 +40,7 @@ import java.util.List;
 public class CarAdViewController {
     private static final Logger logger = LoggerFactory.getLogger(CarAdViewController.class);
     private final CarAdService carAdService;
+    private final CarService carService;
     private final UserMapper userMapper;
 
     @GetMapping("/create")
@@ -43,7 +48,7 @@ public class CarAdViewController {
         CarAdRequest emptyAdRequest = new CarAdRequest();
 
         model.addAttribute("ad", emptyAdRequest);
-        model.addAttribute("brands", carAdService.getAllBrands());
+        model.addAttribute("brands", carService.getAllBrands());
         return "create-ad";
     }
 
@@ -55,10 +60,18 @@ public class CarAdViewController {
                                     @AuthenticationPrincipal CustomUserDetails userDetails,
                                     RedirectAttributes redirectAttributes) throws IOException {
         if (result.hasErrors()) {
+            result.getAllErrors().forEach(error -> {
+                if (error instanceof FieldError fieldError) {
+                    logger.warn("Validation new Error: Field '{}' failed with message: {}",
+                            fieldError.getField(), fieldError.getDefaultMessage());
+                } else {
+                    logger.warn("Validation new Error: Object '{}' failed with message: {}",
+                            error.getObjectName(), error.getDefaultMessage());
+                }
+            });
             model.addAttribute("ad", carAdRequest);
             return "create-ad";
         }
-
         Long authorId = userDetails.getId();
         carAdService.createCarAd(carAdRequest, authorId, images);
         redirectAttributes.addFlashAttribute("successMessage", "Объявление успешно создано");
@@ -69,9 +82,10 @@ public class CarAdViewController {
     @GetMapping
     public String listAds(@ModelAttribute CarAdFilter filter,
                           @RequestParam(defaultValue = "0") int page,
-                          @RequestParam(defaultValue = "10") int size,
+                          @RequestParam(defaultValue = "12") int size,
+                          @RequestParam(defaultValue = "POPULAR") CarAdSortOrder sort,
                           Model model) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sort.getDirection(), sort.getProperty()));
         Page<CarAdResponse> ads = carAdService.search(filter, pageable);
 
         var pagination = PaginationUtils.calculate(
@@ -85,9 +99,17 @@ public class CarAdViewController {
         model.addAttribute("totalPages", pagination.totalPages);
         model.addAttribute("startPage", pagination.startPage);
         model.addAttribute("endPage", pagination.endPage);
-        model.addAttribute("brands", carAdService.getAllBrands());
-        model.addAttribute("models", carAdService.getAllModels());
-        model.addAttribute("years", carAdService.getAllYears());
+
+        model.addAttribute("sortOrders", CarAdSortOrder.values());
+        model.addAttribute("currentSort", sort);
+
+        model.addAttribute("brands", carService.getAllBrands());
+        if (filter.getBrand() != null && !filter.getBrand().isEmpty()) {
+            model.addAttribute("models", carService.getModelsByBrand(filter.getBrand()));
+        } else {
+            model.addAttribute("models", Collections.emptyList());
+        }
+        model.addAttribute("years", carService.getAllYears());
         model.addAttribute("filter", filter);
         return "ads-list";
     }

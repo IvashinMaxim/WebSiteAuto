@@ -8,7 +8,6 @@ import com.example.analysis.service.RegressionModelSaver;
 import com.example.websiteauto.dto.CarRegressionRow;
 import com.example.websiteauto.dto.mapper.ObservationMapper;
 import com.example.websiteauto.repositories.CarAdRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;

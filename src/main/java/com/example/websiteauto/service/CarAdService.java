@@ -17,7 +17,6 @@ import com.example.websiteauto.repositories.CarRepository;
 import com.example.websiteauto.repositories.UserRepository;
 import com.example.websiteauto.repositories.specification.CarAdSpecification;
 import jakarta.validation.Valid;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +31,7 @@ import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class CarAdService {
@@ -58,26 +58,28 @@ public class CarAdService {
     }
 
     @Transactional
-    public CarAdResponse createCarAd(CarAdRequest request, Long authorId, List<MultipartFile> images) throws IOException {
+    public void createCarAd(CarAdRequest request, Long authorId, List<MultipartFile> images) throws IOException {
         User author = userRepository.findById(authorId)
                 .orElseThrow(() -> new UserNotFoundException(authorId));
 
         Car car = new Car();
         carMapper.updateCarFromDto(request.getCar(), car);
         car.setRealnessOfCar(false);
+//        car.setYearUpp();
+
+        carRepository.save(car);
 
         CarAd carAd = carAdMapper.toEntity(request);
         carAd.setCar(car);
         carAd.setAuthor(author);
         carAd.setCreatedAt(LocalDateTime.now());
 
+        carAdRepository.save(carAd);
         if (images != null && !images.isEmpty()) {
             List<Image> imageList = imageService.createAndSaveImages(images, carAd);
             carAd.setImages(imageList);
         }
-
-        carAdRepository.save(carAd);
-        return carAdMapper.toAdResponse(carAd);
+        carAdMapper.toAdResponse(carAd);
     }
 
     @Transactional(readOnly = true)
@@ -112,7 +114,7 @@ public class CarAdService {
     }
 
     @Transactional
-    public CarAdResponse updateCarAd(Long adId, CarAdRequest request, List<MultipartFile> images, Long currentUserId) throws IOException {
+    public void updateCarAd(Long adId, CarAdRequest request, List<MultipartFile> images, Long currentUserId) throws IOException {
         CarAd carAd = carAdRepository.findById(adId).orElseThrow(() -> new CarAdNotFoundException(adId));
 
         if (!carAd.getAuthor().getId().equals(currentUserId)) {
@@ -151,7 +153,7 @@ public class CarAdService {
             List<Image> newImages = imageService.createAndSaveImages(images, carAd);
             carAd.getImages().addAll(newImages);
         }
-        return carAdMapper.toAdResponse(carAd);
+        carAdMapper.toAdResponse(carAd);
     }
 
     @Transactional
@@ -174,28 +176,20 @@ public class CarAdService {
             return Page.empty(pageable);
         }
 
-        List<CarAd> ads = carAdRepository.findAllByIdsWithRelations(pageIds.getContent());
+        List<Long> targetIds = pageIds.getContent();
 
-        List<CarAdResponse> dtoList = ads.stream()
-                .map(carAdMapper::toAdResponse)
+        List<CarAd> ads = carAdRepository.findAllByIdsWithRelations(targetIds);
+
+        List<CarAdResponse> dtoList = targetIds.stream()
+                .map(id -> ads.stream()
+                        .filter(ad -> ad.getId().equals(id))
+                        .findFirst()
+                        .map(carAdMapper::toAdResponse)
+                        .orElse(null))
+                .filter(Objects::nonNull)
                 .toList();
 
         return new PageImpl<>(dtoList, pageable, pageIds.getTotalElements());
-    }
-
-    @Cacheable("brands")
-    public List<String> getAllBrands() {
-        return carAdRepository.findDistinctBrands();
-    }
-
-    @Cacheable("models")
-    public List<String> getAllModels() {
-        return carAdRepository.findDistinctModels();
-    }
-
-    @Cacheable("years")
-    public List<Integer> getAllYears() {
-        return carAdRepository.findDistinctYears();
     }
 
     public Page<CarAdResponse> findAdsByAuthorId(Long authorId, Pageable pageable) {
@@ -203,11 +197,6 @@ public class CarAdService {
         Page<CarAd> carAds = carAdRepository.findAll(spec, pageable);
         System.out.println("Found " + carAds.getTotalElements() + " ads for author " + authorId); // Отладка
         return carAds.map(carAdMapper::toAdResponse);
-    }
-
-    @Cacheable("modelsByBrand")
-    public List<String> getModelsByBrand(String brand) {
-        return carAdRepository.findModelsByBrand(brand);
     }
 
     public List<Object> getDistinctValues(String target, Specification<CarAd> spec) {

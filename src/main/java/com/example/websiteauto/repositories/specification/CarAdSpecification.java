@@ -25,27 +25,34 @@ public class CarAdSpecification {
             if (filter.getModel() != null && !filter.getModel().isEmpty()) {
                 predicates.add(cb.equal(carJoin.get("model"), filter.getModel()));
             }
-            if (filter.getMinYear() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(carJoin.get("yearLow"), filter.getMinYear()));
-            }
-            if (filter.getMaxYear() != null) {
-                predicates.add(cb.lessThanOrEqualTo(carJoin.get("yearUpp"), filter.getMaxYear()));
+            if (filter.getMinYear() != null && filter.getMaxYear() != null
+                && filter.getMinYear() > filter.getMaxYear()) {
+                // Можно либо вернуть пустой предикат, либо (лучше) приравнять их
+                filter.setMaxYear(filter.getMinYear()); // или выкинуть ошибку
             }
 
+            if (filter.getMinYear() != null) {
+                predicates.add(cb.or(
+                        carJoin.get("yearUpp").isNull(),
+                        cb.greaterThanOrEqualTo(carJoin.get("yearUpp"), filter.getMinYear().shortValue())
+                ));
+            }
+
+            if (filter.getMaxYear() != null) {
+                predicates.add(cb.lessThanOrEqualTo(carJoin.get("yearLow"), filter.getMaxYear().shortValue()));
+            }
             if (filter.getMinMileage() != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("mileage"), filter.getMinMileage()));
             }
             if (filter.getMaxMileage() != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("mileage"), filter.getMaxMileage()));
             }
-
             if (filter.getMinPrice() != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("price"), filter.getMinPrice()));
             }
             if (filter.getMaxPrice() != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("price"), filter.getMaxPrice()));
             }
-
             if (filter.getKeyword() != null && !filter.getKeyword().isEmpty()) {
                 String pattern = "%" + filter.getKeyword().toLowerCase() + "%";
                 predicates.add(cb.or(

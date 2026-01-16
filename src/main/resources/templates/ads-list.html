@@ -45,8 +45,10 @@
 
     <div class="filter-section mb-4">
         <form th:action="@{/ads}" th:object="${filter}" method="get" class="row g-3" id="filterForm">
-            
+
             <input type="hidden" id="savedModel" th:value="${filter.model}">
+            <input type="hidden" id="savedMinYear" th:value="${filter.minYear}">
+            <input type="hidden" name="sort" id="hiddenSortField" th:value="${currentSort.name()}">
 
             <div class="col-md-3">
                 <label class="form-label">Поиск</label>
@@ -100,10 +102,28 @@
         </form>
     </div>
 
-    <div class="d-flex justify-content-end mb-3">
-        <a th:href="@{/ads/create}" class="btn btn-success" sec:authorize="isAuthenticated()">
-            <i class="bi bi-plus-circle"></i> Создать объявление
-        </a>
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+
+        <div class="d-flex align-items-center gap-3">
+            <a th:href="@{/ads/create}" class="btn btn-success btn-sm" sec:authorize="isAuthenticated()">
+                <i class="bi bi-plus-circle"></i> Создать объявление
+            </a>
+
+            <div class="d-flex align-items-center">
+                <label for="sortSelect" class="form-label me-2 mb-0 text-muted" style="white-space: nowrap;">
+                    <i class="bi bi-sort-down"></i> Сортировать:
+                </label>
+                <select id="sortSelect" class="form-select form-select-sm"
+                        style="width: auto; min-width: 180px;"
+                        onchange="submitWithSort()">
+                    <option th:each="order : ${sortOrders}"
+                            th:value="${order.name()}"
+                            th:text="${order.displayValue}"
+                            th:selected="${order == currentSort}">
+                    </option>
+                </select>
+            </div>
+        </div>
     </div>
 
     <div th:if="${#lists.isEmpty(ads)}" class="alert alert-info">
@@ -145,6 +165,7 @@
             <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
                 <a class="page-link"
                    th:href="@{/ads(page=${currentPage - 1}, size=${10},
+                   sort=${currentSort.name()},
                    brand=${filter?.brand}, model=${filter?.model}, minYear=${filter?.minYear},
                    maxYear=${filter?.maxYear}, minMileage=${filter?.minMileage},
                    maxMileage=${filter?.maxMileage}, minPrice=${filter?.minPrice},
@@ -158,7 +179,8 @@
                 th:if="${totalPages <= (2 + 2 * 3 + 1)}"
                 th:classappend="${currentPage == p} ? 'active'">
                 <a class="page-link"
-                   th:href="@{/ads(page=${p}, size=${10}, brand=${filter?.brand}, model=${filter?.model},
+                   th:href="@{/ads(page=${p}, size=${10},
+                    sort=${currentSort.name()},brand=${filter?.brand}, model=${filter?.model},
                    minYear=${filter?.minYear}, maxYear=${filter?.maxYear}, minMileage=${filter?.minMileage},
                    maxMileage=${filter?.maxMileage}, minPrice=${filter?.minPrice}, maxPrice=${filter?.maxPrice},
                    keyword=${filter?.keyword})}"
@@ -171,7 +193,7 @@
 
                 <li class="page-item" th:classappend="${currentPage == 0} ? 'active'">
                     <a class="page-link"
-                       th:href="@{/ads(page=0, size=${10}, brand=${filter?.brand}, model=${filter?.model},
+                       th:href="@{/ads(page=0, size=${10}, brand=${filter?.brand},sort=${currentSort.name()}, model=${filter?.model},
                        minYear=${filter?.minYear}, maxYear=${filter?.maxYear}, minMileage=${filter?.minMileage},
                        maxMileage=${filter?.maxMileage}, minPrice=${filter?.minPrice}, maxPrice=${filter?.maxPrice},
                        keyword=${filter?.keyword})}">1</a>
@@ -185,7 +207,7 @@
                     th:each="p : ${#numbers.sequence(startPage, endPage)}"
                     th:classappend="${currentPage == p} ? 'active'">
                     <a class="page-link"
-                       th:href="@{/ads(page=${p}, size=${10}, brand=${filter?.brand}, model=${filter?.model},
+                       th:href="@{/ads(page=${p}, size=${10}, brand=${filter?.brand},sort=${currentSort.name()}, model=${filter?.model},
                        minYear=${filter?.minYear}, maxYear=${filter?.maxYear}, minMileage=${filter?.minMileage},
                        maxMileage=${filter?.maxMileage}, minPrice=${filter?.minPrice}, maxPrice=${filter?.maxPrice},
                        keyword=${filter?.keyword})}"
@@ -198,7 +220,7 @@
 
                 <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'active'">
                     <a class="page-link"
-                       th:href="@{/ads(page=${totalPages - 1}, size=${10}, brand=${filter?.brand}, model=${filter?.model},
+                       th:href="@{/ads(page=${totalPages - 1}, size=${10}, brand=${filter?.brand},sort=${currentSort.name()}, model=${filter?.model},
                        minYear=${filter?.minYear}, maxYear=${filter?.maxYear}, minMileage=${filter?.minMileage},
                        maxMileage=${filter?.maxMileage}, minPrice=${filter?.minPrice}, maxPrice=${filter?.maxPrice},
                        keyword=${filter?.keyword})}"
@@ -208,7 +230,7 @@
 
             <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
                 <a class="page-link"
-                   th:href="@{/ads(page=${currentPage + 1}, size=${10}, brand=${filter?.brand}, model=${filter?.model},
+                   th:href="@{/ads(page=${currentPage + 1}, size=${10}, brand=${filter?.brand},sort=${currentSort.name()}, model=${filter?.model},
                    minYear=${filter?.minYear}, maxYear=${filter?.maxYear}, minMileage=${filter?.minMileage},
                    maxMileage=${filter?.maxMileage}, minPrice=${filter?.minPrice}, maxPrice=${filter?.maxPrice},
                    keyword=${filter?.keyword})}">
@@ -223,14 +245,12 @@
 <script>
     const API_URL = '/api/v1/ads/dictionary';
 
-    // КОНФИГУРАЦИЯ ЗАВИСИМОСТЕЙ
     const dependencies = {
         'brandSelect': ['modelSelect'],
         'modelSelect': ['minYearSelect']
     };
 
     function initDynamicFilters() {
-        // 1. Навешиваем слушатели
         Object.keys(dependencies).forEach(triggerId => {
             const triggerEl = document.getElementById(triggerId);
             if (!triggerEl) return;
@@ -243,21 +263,28 @@
             });
         });
 
-        // 2. Инициализируем. Если Марка уже выбрана (при перезагрузке),
-        // нужно сразу обновить Модель
         if (document.getElementById('brandSelect').value) {
             updateTargetField('modelSelect', false);
         }
 
-        // 3. Дополнительная инициализация для года, если модель выбрана
         if (document.getElementById('modelSelect') && document.getElementById('modelSelect').value) {
             updateTargetField('minYearSelect', false);
         }
     }
 
-    /**
-     * Выполняет AJAX-запрос для обновления options в целевом select.
-     */
+    function submitWithSort() {
+        const filterForm = document.getElementById('filterForm');
+        const sortSelect = document.getElementById('sortSelect');
+        const hiddenSortField = document.getElementById('hiddenSortField');
+
+        if (filterForm && sortSelect && hiddenSortField) {
+            // Копируем выбранную сортировку в скрытое поле формы
+            hiddenSortField.value = sortSelect.value;
+            // Отправляем форму со всеми фильтрами и новой сортировкой
+            filterForm.submit();
+        }
+    }
+
     function updateTargetField(targetId, resetChildren = true) {
         const targetSelect = document.getElementById(targetId);
         const filterForm = document.getElementById('filterForm');
@@ -265,27 +292,39 @@
 
         const fieldName = targetSelect.dataset.targetField || targetSelect.name;
 
-        // Сохраняем текущее значение, чтобы попробовать выбрать его после обновления
-        const savedValue = document.getElementById('savedModel')?.value;
-        const currentValue = savedValue || targetSelect.value;
+        let currentValue = targetSelect.value;
+        if (targetId === 'modelSelect') {
+            currentValue = document.getElementById('savedModel')?.value || currentValue;
+        } else if (targetId === 'minYearSelect') {
+            currentValue = document.getElementById('savedMinYear')?.value || currentValue;
+        }
+
         const defaultOption = targetSelect.options[0];
 
-        // 1. Собираем текущее состояние формы
         const formData = new FormData(filterForm);
         const params = new URLSearchParams();
-        for (const [key, value] of formData.entries()) {
-            if (value !== null && value !== '') {
-                params.append(key, value);
+
+        // Список полей, которые ваш CarService реально обрабатывает в searchDictionary
+        const allowedParams = ['brand', 'model', 'minYear', 'bodyType', 'engineType', 'transmission', 'driveType'];
+
+        formData.forEach((value, key) => {
+            if (value && allowedParams.includes(key)) {
+                // Мапим minYear с фронта в yearLow для бэкенда
+                if (key === 'minYear') {
+                    params.set('yearLow', value);
+                } else {
+                    params.set(key, value);
+                }
             }
-        }
+        });
+
+        // Устанавливаем цель (что именно мы сейчас хотим загрузить)
         params.set('target', fieldName);
 
-        // 2. Очищаем целевой select
         targetSelect.innerHTML = '';
         targetSelect.appendChild(defaultOption);
         targetSelect.disabled = true;
 
-        // 3. Выполняем запрос
         fetch(`${API_URL}?${params.toString()}`)
             .then(response => {
                 if (!response.ok) {
@@ -305,11 +344,14 @@
                     }
                     targetSelect.appendChild(option);
                 });
+                if (currentValue) {
+                    targetSelect.value = currentValue;
+                }
                 targetSelect.disabled = false;
 
-                // 4. Если значение было установлено из фильтра (currentValue не пусто)
-                // и оно нашлось в новом списке, то зависимые поля не нужно сбрасывать,
-                // а нужно попробовать загрузить для них данные (например, Год по Модели).
+                if (targetId === 'modelSelect') document.getElementById('savedModel').value = '';
+                if (targetId === 'minYearSelect') document.getElementById('savedMinYear').value = '';
+
                 if (currentValue && targetSelect.value === currentValue && dependencies[targetId] && !resetChildren) {
                     dependencies[targetId].forEach(childId => {
                         updateTargetField(childId, false); // Загружаем данные для ребенка, не сбрасывая его текущее значение

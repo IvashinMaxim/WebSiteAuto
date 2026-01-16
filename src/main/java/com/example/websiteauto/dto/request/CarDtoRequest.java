@@ -26,7 +26,7 @@ public class CarDtoRequest {
     @Min(value = 1900, message = "Год должен быть не ранее 1900")
     private Integer yearLow;
 
-    @NotNull(message = "Конечный год обязателен")
+//    @NotNull(message = "Конечный год обязателен")
     @Min(value = 1900, message = "Год должен быть не ранее 1900")
     @Max(value = 2100, message = "Год слишком далек")
     private Integer yearUpp;

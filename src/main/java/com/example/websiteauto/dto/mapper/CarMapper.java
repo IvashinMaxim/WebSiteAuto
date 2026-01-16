@@ -9,14 +9,20 @@ import com.example.websiteauto.entity.converters.ConvertableEnum;
 
 @Mapper(componentModel = "spring")
 public interface CarMapper {
-    CarDtoRequest toDtoRequest(Car car);
 
-    @Mapping(target = "bodyType", expression = "java(car.getBodyType().getValue())")
-    @Mapping(target = "engineType", expression = "java(car.getEngineType().getValue())")
-    @Mapping(target = "driveType", expression = "java(car.getDriveType().getValue())")
-    @Mapping(target = "transmission", expression = "java(car.getTransmission().getValue())")
-    @Mapping(target = "steeringSide", expression = "java(car.getSteeringSide().getValue())")
+    @Mapping(target = "bodyType", expression = "java(car.getBodyType() != null ? car.getBodyType().getValue() : null)")
+    @Mapping(target = "engineType", expression = "java(car.getEngineType() != null ? car.getEngineType().getValue() : null)")
+    @Mapping(target = "driveType", expression = "java(car.getDriveType() != null ? car.getDriveType().getValue() : null)")
+    @Mapping(target = "transmission", expression = "java(car.getTransmission() != null ? car.getTransmission().getValue() : null)")
+    @Mapping(target = "steeringSide", expression = "java(car.getSteeringSide() != null ? car.getSteeringSide().getValue() : null)")
     CarDtoResponse toCarDtoResponse(Car car);
+
+    @Mapping(target = "bodyType", expression = "java(car.getBodyType() != null ? car.getBodyType().getValue() : null)")
+    @Mapping(target = "engineType", expression = "java(car.getEngineType() != null ? car.getEngineType().getValue() : null)")
+    @Mapping(target = "driveType", expression = "java(car.getDriveType() != null ? car.getDriveType().getValue() : null)")
+    @Mapping(target = "transmission", expression = "java(car.getTransmission() != null ? car.getTransmission().getValue() : null)")
+    @Mapping(target = "steeringSide", expression = "java(car.getSteeringSide() != null ? car.getSteeringSide().getValue() : null)")
+    CarDtoRequest toDtoRequest(Car car);
 
     @Mapping(target = "bodyType", source = "bodyType", qualifiedByName = "mapBodyType")
     @Mapping(target = "engineType", source = "engineType", qualifiedByName = "mapEngineType")
@@ -65,7 +71,7 @@ public interface CarMapper {
         }
 
         for (T enumValue : enumClass.getEnumConstants()) {
-            if (enumValue.name().equalsIgnoreCase(value)) {
+            if (enumValue.getValue().equalsIgnoreCase(value)) {
                 return enumValue;
             }
         }

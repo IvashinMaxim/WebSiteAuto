@@ -164,7 +164,7 @@
         <ul class="pagination justify-content-center">
             <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
                 <a class="page-link"
-                   th:href="@{/ads(page=${currentPage - 1}, size=${10},
+                   th:href="@{/ads(page=${currentPage - 1}, size=${pageSize},
                    sort=${currentSort.name()},
                    brand=${filter?.brand}, model=${filter?.model}, minYear=${filter?.minYear},
                    maxYear=${filter?.maxYear}, minMileage=${filter?.minMileage},
@@ -179,7 +179,7 @@
                 th:if="${totalPages <= (2 + 2 * 3 + 1)}"
                 th:classappend="${currentPage == p} ? 'active'">
                 <a class="page-link"
-                   th:href="@{/ads(page=${p}, size=${10},
+                   th:href="@{/ads(page=${p}, size=${pageSize},
                     sort=${currentSort.name()},brand=${filter?.brand}, model=${filter?.model},
                    minYear=${filter?.minYear}, maxYear=${filter?.maxYear}, minMileage=${filter?.minMileage},
                    maxMileage=${filter?.maxMileage}, minPrice=${filter?.minPrice}, maxPrice=${filter?.maxPrice},
@@ -193,7 +193,7 @@
 
                 <li class="page-item" th:classappend="${currentPage == 0} ? 'active'">
                     <a class="page-link"
-                       th:href="@{/ads(page=0, size=${10}, brand=${filter?.brand},sort=${currentSort.name()}, model=${filter?.model},
+                       th:href="@{/ads(page=0, size=${pageSize}, brand=${filter?.brand},sort=${currentSort.name()}, model=${filter?.model},
                        minYear=${filter?.minYear}, maxYear=${filter?.maxYear}, minMileage=${filter?.minMileage},
                        maxMileage=${filter?.maxMileage}, minPrice=${filter?.minPrice}, maxPrice=${filter?.maxPrice},
                        keyword=${filter?.keyword})}">1</a>
@@ -207,7 +207,7 @@
                     th:each="p : ${#numbers.sequence(startPage, endPage)}"
                     th:classappend="${currentPage == p} ? 'active'">
                     <a class="page-link"
-                       th:href="@{/ads(page=${p}, size=${10}, brand=${filter?.brand},sort=${currentSort.name()}, model=${filter?.model},
+                       th:href="@{/ads(page=${p}, size=${pageSize}, brand=${filter?.brand},sort=${currentSort.name()}, model=${filter?.model},
                        minYear=${filter?.minYear}, maxYear=${filter?.maxYear}, minMileage=${filter?.minMileage},
                        maxMileage=${filter?.maxMileage}, minPrice=${filter?.minPrice}, maxPrice=${filter?.maxPrice},
                        keyword=${filter?.keyword})}"
@@ -220,7 +220,7 @@
 
                 <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'active'">
                     <a class="page-link"
-                       th:href="@{/ads(page=${totalPages - 1}, size=${10}, brand=${filter?.brand},sort=${currentSort.name()}, model=${filter?.model},
+                       th:href="@{/ads(page=${totalPages - 1}, size=${pageSize}, brand=${filter?.brand},sort=${currentSort.name()}, model=${filter?.model},
                        minYear=${filter?.minYear}, maxYear=${filter?.maxYear}, minMileage=${filter?.minMileage},
                        maxMileage=${filter?.maxMileage}, minPrice=${filter?.minPrice}, maxPrice=${filter?.maxPrice},
                        keyword=${filter?.keyword})}"
@@ -230,7 +230,7 @@
 
             <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
                 <a class="page-link"
-                   th:href="@{/ads(page=${currentPage + 1}, size=${10}, brand=${filter?.brand},sort=${currentSort.name()}, model=${filter?.model},
+                   th:href="@{/ads(page=${currentPage + 1}, size=${pageSize}, brand=${filter?.brand},sort=${currentSort.name()}, model=${filter?.model},
                    minYear=${filter?.minYear}, maxYear=${filter?.maxYear}, minMileage=${filter?.minMileage},
                    maxMileage=${filter?.maxMileage}, minPrice=${filter?.minPrice}, maxPrice=${filter?.maxPrice},
                    keyword=${filter?.keyword})}">

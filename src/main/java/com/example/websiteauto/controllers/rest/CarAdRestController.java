@@ -1,6 +1,7 @@
 package com.example.websiteauto.controllers.rest;
 
 import com.example.websiteauto.dto.request.CarAdRequest;
+import com.example.websiteauto.dto.response.CarAdListResponse;
 import com.example.websiteauto.dto.response.CarAdResponse;
 import com.example.websiteauto.security.CustomUserDetails;
 import com.example.websiteauto.service.CarAdService;
@@ -47,7 +48,7 @@ public class CarAdRestController {
     }
 
     @GetMapping
-    public Page<CarAdResponse> getAll(
+    public Page<CarAdListResponse> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             CarAdFilter filter

@@ -5,6 +5,7 @@ import com.example.websiteauto.dto.mapper.CarAdMapper;
 import com.example.websiteauto.dto.mapper.CarMapper;
 import com.example.websiteauto.dto.request.CarAdRequest;
 import com.example.websiteauto.dto.request.CarDtoRequest;
+import com.example.websiteauto.dto.response.CarAdListResponse;
 import com.example.websiteauto.dto.response.CarAdResponse;
 import com.example.websiteauto.entity.Car;
 import com.example.websiteauto.entity.CarAd;
@@ -31,7 +32,10 @@ import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class CarAdService {
@@ -167,7 +171,7 @@ public class CarAdService {
     }
 
     @Transactional(readOnly = true)
-    public Page<CarAdResponse> search(CarAdFilter filter, Pageable pageable) {
+    public Page<CarAdListResponse> search(CarAdFilter filter, Pageable pageable) {
         Specification<CarAd> spec = CarAdSpecification.withFilter(filter);
 
         Page<Long> pageIds = carAdRepository.findAllIdsBySpecification(spec, pageable);
@@ -178,15 +182,15 @@ public class CarAdService {
 
         List<Long> targetIds = pageIds.getContent();
 
-        List<CarAd> ads = carAdRepository.findAllByIdsWithRelations(targetIds);
+        List<CarAd> ads = carAdRepository.findAllByIdsForList(targetIds);
 
-        List<CarAdResponse> dtoList = targetIds.stream()
-                .map(id -> ads.stream()
-                        .filter(ad -> ad.getId().equals(id))
-                        .findFirst()
-                        .map(carAdMapper::toAdResponse)
-                        .orElse(null))
+        Map<Long, CarAd> adMap = ads.stream()
+                .collect(Collectors.toMap(CarAd::getId, Function.identity()));
+
+        List<CarAdListResponse> dtoList = targetIds.stream()
+                .map(adMap::get)
                 .filter(Objects::nonNull)
+                .map(carAdMapper::toListResponse)
                 .toList();
 
         return new PageImpl<>(dtoList, pageable, pageIds.getTotalElements());

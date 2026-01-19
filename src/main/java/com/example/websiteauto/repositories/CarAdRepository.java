@@ -22,6 +22,12 @@ public interface CarAdRepository extends JpaRepository<CarAd, Long>, JpaSpecific
            "WHERE ca.id IN :ids")
     List<CarAd> findAllByIdsWithRelations(@Param("ids") List<Long> ids);
 
+    @Query("SELECT DISTINCT ca FROM CarAd ca " +
+           "LEFT JOIN FETCH ca.car " +
+           "LEFT JOIN FETCH ca.author " +
+           "WHERE ca.id IN :ids")
+    List<CarAd> findAllByIdsForList(@Param("ids") List<Long> ids);
+
     @Query("""
                 SELECT new com.example.websiteauto.dto.CarRegressionRow(
                     ca.price,

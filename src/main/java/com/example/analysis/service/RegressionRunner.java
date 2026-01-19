@@ -1,10 +1,8 @@
-package com.example.websiteauto.service;
+package com.example.analysis.service;
 
 import com.example.analysis.data.MarketSegment;
 import com.example.analysis.data.Observation;
 import com.example.analysis.regression.RegressionResult;
-import com.example.analysis.service.RegressionEngine;
-import com.example.analysis.service.RegressionModelSaver;
 import com.example.websiteauto.dto.CarRegressionRow;
 import com.example.websiteauto.dto.mapper.ObservationMapper;
 import com.example.websiteauto.repositories.CarAdRepository;
@@ -77,3 +75,4 @@ public class RegressionRunner {
     }
 
 }
+

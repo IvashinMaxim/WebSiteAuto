@@ -20,25 +20,22 @@ public class CarAdRepositoryImpl implements CarAdRepositoryCustom {
     @PersistenceContext
     private EntityManager em;
 
-    private static final int MAX_SEARCH_LIMIT = 990;
+    private static final int MAX_SEARCH_LIMIT = 1183;
 
     @Override
     public Page<Long> findAllIdsBySpecification(Specification<CarAd> spec, Pageable pageable) {
         var cb = em.getCriteriaBuilder();
-        // 1. Меняем тип результата на Tuple, чтобы выбрать несколько колонок
         var query = cb.createTupleQuery();
         var root = query.from(CarAd.class);
 
-        // 2. Создаем список того, что будем выбирать (Select Clause)
         List<Selection<?>> selections = new ArrayList<>();
-        selections.add(root.get("id")); // ID всегда первый (индекс 0)
+        selections.add(root.get("id"));
 
         if (spec != null) {
             var predicate = spec.toPredicate(root, query, cb);
             if (predicate != null) query.where(predicate);
         }
 
-        // 3. Собираем сортировку и ДОБАВЛЯЕМ поля сортировки в SELECT
         List<jakarta.persistence.criteria.Order> orders = new ArrayList<>();
         if (pageable.getSort().isSorted()) {
             pageable.getSort().forEach(sortOrder -> {
@@ -47,7 +44,7 @@ public class CarAdRepositoryImpl implements CarAdRepositoryCustom {
                         ? root.join("car").get(property.split("\\.")[1])
                         : root.get(property);
 
-                selections.add(sortPath); // Добавляем поле в SELECT, чтобы PostgreSQL не ругался
+                selections.add(sortPath);
 
                 if (sortOrder.isAscending()) {
                     orders.add(cb.asc(sortPath));
@@ -59,22 +56,19 @@ public class CarAdRepositoryImpl implements CarAdRepositoryCustom {
             query.orderBy(orders);
         }
 
-        // Применяем собранный список полей в SELECT
         query.multiselect(selections);
 
-        // 4. Выполняем запрос и забираем только первый элемент (наш ID)
         List<Long> ids = em.createQuery(query)
                 .setFirstResult((int) pageable.getOffset())
                 .setMaxResults(pageable.getPageSize())
                 .getResultList()
                 .stream()
-                .map(tuple -> (Long) tuple.get(0)) // Забираем ID из первой колонки Tuple
+                .map(tuple -> (Long) tuple.get(0))
                 .toList();
 
-        // ПОДСЧЕТ ОБЩЕГО КОЛИЧЕСТВА
         var countQuery = cb.createQuery(Long.class);
         var countRoot = countQuery.from(CarAd.class);
-        countQuery.select(cb.count(countRoot));
+        countQuery.select(cb.countDistinct(countRoot.get("id")));
 
         if (spec != null) {
             countQuery.where(spec.toPredicate(countRoot, countQuery, cb));

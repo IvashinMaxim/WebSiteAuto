@@ -4,6 +4,7 @@ import com.example.websiteauto.dto.CarAdFilter;
 import com.example.websiteauto.dto.enums.CarAdSortOrder;
 import com.example.websiteauto.dto.mapper.UserMapper;
 import com.example.websiteauto.dto.request.CarAdRequest;
+import com.example.websiteauto.dto.response.CarAdListResponse;
 import com.example.websiteauto.dto.response.CarAdResponse;
 import com.example.websiteauto.dto.response.UserResponse;
 import com.example.websiteauto.entity.User;
@@ -86,7 +87,7 @@ public class CarAdViewController {
                           @RequestParam(defaultValue = "POPULAR") CarAdSortOrder sort,
                           Model model) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sort.getDirection(), sort.getProperty()));
-        Page<CarAdResponse> ads = carAdService.search(filter, pageable);
+        Page<CarAdListResponse> ads = carAdService.search(filter, pageable);
 
         var pagination = PaginationUtils.calculate(
                 ads.getNumber(),
@@ -95,6 +96,7 @@ public class CarAdViewController {
         );
 
         model.addAttribute("ads", ads.getContent());
+        model.addAttribute("pageSize", size);
         model.addAttribute("currentPage", pagination.currentPage);
         model.addAttribute("totalPages", pagination.totalPages);
         model.addAttribute("startPage", pagination.startPage);

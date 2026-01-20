@@ -47,7 +47,6 @@ public class CarAdViewController {
     @GetMapping("/create")
     public String showCreateAdForm(Model model) {
         CarAdRequest emptyAdRequest = new CarAdRequest();
-
         model.addAttribute("ad", emptyAdRequest);
         model.addAttribute("brands", carService.getAllBrands());
         return "create-ad";
@@ -56,20 +55,11 @@ public class CarAdViewController {
     @PostMapping("/create")
     public String processCreateForm(@ModelAttribute("ad") @Valid CarAdRequest carAdRequest,
                                     BindingResult result,
-                                    @RequestParam("images") List<MultipartFile> images,
+                                    @RequestParam(value = "images", required = false) List<MultipartFile> images,
                                     Model model,
                                     @AuthenticationPrincipal CustomUserDetails userDetails,
                                     RedirectAttributes redirectAttributes) throws IOException {
         if (result.hasErrors()) {
-            result.getAllErrors().forEach(error -> {
-                if (error instanceof FieldError fieldError) {
-                    logger.warn("Validation new Error: Field '{}' failed with message: {}",
-                            fieldError.getField(), fieldError.getDefaultMessage());
-                } else {
-                    logger.warn("Validation new Error: Object '{}' failed with message: {}",
-                            error.getObjectName(), error.getDefaultMessage());
-                }
-            });
             model.addAttribute("ad", carAdRequest);
             return "create-ad";
         }
@@ -94,17 +84,14 @@ public class CarAdViewController {
                 ads.getTotalPages(),
                 3
         );
-
         model.addAttribute("ads", ads.getContent());
         model.addAttribute("pageSize", size);
         model.addAttribute("currentPage", pagination.currentPage);
         model.addAttribute("totalPages", pagination.totalPages);
         model.addAttribute("startPage", pagination.startPage);
         model.addAttribute("endPage", pagination.endPage);
-
         model.addAttribute("sortOrders", CarAdSortOrder.values());
         model.addAttribute("currentSort", sort);
-
         model.addAttribute("brands", carService.getAllBrands());
         if (filter.getBrand() != null && !filter.getBrand().isEmpty()) {
             model.addAttribute("models", carService.getModelsByBrand(filter.getBrand()));
@@ -150,7 +137,7 @@ public class CarAdViewController {
     @GetMapping("/edit/{id}")
     public String editAdForm(@PathVariable Long id,
                              @AuthenticationPrincipal CustomUserDetails userDetails,
-                             Model model) throws AccessDeniedException {
+                             Model model) {
         CarAdRequest adRequest = carAdService.getCarAdForEdit(id, userDetails.getId());
         model.addAttribute("ad", adRequest);
         model.addAttribute("id", id);
@@ -162,7 +149,7 @@ public class CarAdViewController {
     public String updateAd(@PathVariable Long id,
                            @Valid @ModelAttribute("ad") CarAdRequest request,
                            BindingResult bindingResult,
-                           @RequestParam(value = "images") List<MultipartFile> newImages,
+                           @RequestParam(value = "images", required = false) List<MultipartFile> newImages,
                            @AuthenticationPrincipal CustomUserDetails userDetails,
                            Model model,
                            RedirectAttributes redirectAttributes) throws IOException {

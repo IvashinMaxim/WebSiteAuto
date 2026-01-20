@@ -228,16 +228,22 @@
                             <div class="invalid-feedback" th:if="${#fields.hasErrors('price')}"
                                  th:errors="*{price}"></div>
                         </div>
+
                         <div class="col-md-12">
                             <label class="form-label">Фотографии автомобиля</label>
-                            <div class="image-upload" onclick="document.getElementById('imageInput').click()">
+
+                            <div id="selectedImagesContainer" class="row g-2 mb-2"></div>
+
+                            <div class="image-upload" onclick="document.getElementById('imageInput').click()"
+                                 style="border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer;">
                                 <i class="bi bi-cloud-arrow-up" style="font-size: 2rem;"></i>
                                 <p class="mt-2">Перетащите сюда файлы или нажмите для загрузки</p>
-                                <p class="text-muted">Рекомендуемый размер: до 5 МБ (JPG, PNG)</p>
-                                <img id="imagePreview" class="image-preview" alt="Предпросмотр">
+                                <p class="text-muted small">Вы можете выбрать сразу несколько фото</p>
+
                             </div>
+
                             <input type="file" id="imageInput" name="images" multiple accept="image/*"
-                                   style="display: none;" onchange="previewImage(event)">
+                                   style="display: none;">
                         </div>
                     </div>
                 </div>
@@ -257,6 +263,52 @@
 
 <script>
     const API = "/api/v1/ads/dictionary";
+
+    let selectedFiles = [];
+
+    const imageInput = document.getElementById('imageInput');
+    const container = document.getElementById('selectedImagesContainer');
+
+    imageInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+
+        files.forEach(file => {
+            selectedFiles.push(file);
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const div = document.createElement('div');
+                div.className = 'col-4 col-md-2 position-relative mb-2';
+                div.innerHTML = `
+                <div class="card h-100">
+                    <img src="${event.target.result}" class="card-img-top object-fit-cover" style="height: 100px;">
+                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-0 px-1"
+                            onclick="removeNewFile(this, '${file.name}', ${file.size})">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            `;
+                container.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        updateInputFiles();
+    });
+
+    function removeNewFile(button, fileName, fileSize) {
+        selectedFiles = selectedFiles.filter(f => !(f.name === fileName && f.size === fileSize));
+
+        button.closest('.col-4').remove();
+
+        updateInputFiles();
+    }
+
+    function updateInputFiles() {
+        const dataTransfer = new DataTransfer();
+        selectedFiles.forEach(file => dataTransfer.items.add(file));
+        imageInput.files = dataTransfer.files;
+    }
 
     function fetchDict(target, params = {}) {
         const url = new URL(API, window.location.origin);

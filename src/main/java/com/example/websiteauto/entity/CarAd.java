@@ -10,6 +10,7 @@ import lombok.Builder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -57,7 +58,7 @@ public class CarAd {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
-    private List<Image> images;
+    private List<Image> images = new ArrayList<>();
 
     public void addImage(Image image) {
         images.add(image);

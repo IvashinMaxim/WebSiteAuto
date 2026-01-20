@@ -36,7 +36,6 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
             HttpStatusCode status,
             WebRequest request) {
 
-        // Собираем все ошибки в одну строку или карту для возврата клиенту.
         String allErrors = ex.getBindingResult().getFieldErrors().stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .reduce((s1, s2) -> s1 + "; " + s2)

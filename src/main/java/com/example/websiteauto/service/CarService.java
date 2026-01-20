@@ -8,12 +8,13 @@ import com.example.websiteauto.entity.enums.*;
 import com.example.websiteauto.repositories.CarRepository;
 import jakarta.persistence.EntityManager;
 
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class CarService {
+    private static final Logger log = LoggerFactory.getLogger(CarService.class);
+
 
     private final CarRepository carRepository;
     private final CarMapper carMapper;
@@ -92,6 +95,12 @@ public class CarService {
         if ("color".equals(target)) {
             return List.of("Белый", "Черный", "Серый", "Серебристый", "Синий", "Красный", "Зеленый", "Коричневый", "Бежевый", "Желтый");
         }
+        log.debug(
+                "Dictionary search. target={}, paramsKeys={}",
+                target,
+                params.keySet()
+        );
+
 
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Object> query = cb.createQuery(Object.class);
@@ -137,10 +146,10 @@ public class CarService {
             }
         }
 
-        if (params.containsKey("transmissionType")) { // JS шлет transmissionType
+        if (params.containsKey("transmissionType")) {
             Transmission val = parseEnum(Transmission.class, params.get("transmissionType"));
             if (val != null) {
-                predicates.add(cb.equal(root.get("transmission"), val)); // Поле в Entity называется transmission
+                predicates.add(cb.equal(root.get("transmission"), val));
             }
         }
 

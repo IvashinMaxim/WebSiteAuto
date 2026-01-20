@@ -2,6 +2,7 @@ package com.example.websiteauto.service;
 
 import com.example.websiteauto.entity.CarAd;
 import com.example.websiteauto.entity.Image;
+import com.example.websiteauto.exception.ImageNotFoundException;
 import com.example.websiteauto.repositories.ImageRepository;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -9,6 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -60,36 +64,64 @@ public class ImageService {
 
                 try {
                     file.transferTo(filePath.toFile());
-
+                    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                            @Override
+                            public void afterCompletion(int status) {
+                                if (status == STATUS_ROLLED_BACK) {
+                                    log.warn("Транзакция откатилась. Удаляем мусорный файл: {}", fileName);
+                                    try {
+                                        Files.deleteIfExists(filePath);
+                                    } catch (IOException e) {
+                                        log.error("Не удалось удалить файл при откате: {}", fileName, e);
+                                    }
+                                }
+                            }
+                        });
+                    }
                     Image image = new Image();
                     image.setImagePath(fileName);
                     image.setCarAd(carAd);
-
                     Image savedImage = imageRepository.save(image);
-
                     imageList.add(savedImage);
-                    log.info("Файл успешно загружен: {}", fileName);
+
+                    log.info("Файл успешно загружен и привязан к транзакции: {}", fileName);
 
                 } catch (IOException e) {
-                    log.error("Не удалось сохранить файл: {}", fileName, e);
-                    throw new IOException("Не удалось сохранить файл: " + fileName, e);
+                    log.error("Ошибка ввода-вывода: {}", fileName, e);
+                    throw new IOException("Ошибка загрузки файла", e);
                 }
             }
         }
         return imageList;
     }
 
-    public void deleteImageFile() {
-        Path filePath = Paths.get(uploadDir);
+    public void deleteImageById(Long imageId) {
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new ImageNotFoundException("Изображение не найдено " + imageId));
+        String fileName = image.getImagePath();
+        imageRepository.deleteById(imageId);
 
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    deletePhysicalFile(fileName);
+                }
+            });
+        } else {
+            deletePhysicalFile(fileName);
+        }
+    }
+
+    private void deletePhysicalFile(String fileName) {
+        Path filePath = Paths.get(uploadDir, fileName);
         try {
             if (Files.deleteIfExists(filePath)) {
-                log.info("Файл успешно удален: {}", filePath);
-            } else {
-                log.warn("Попытка удалить файл, который не существует: {}", filePath);
+                log.info("Файл {} успешно удален", fileName);
             }
         } catch (IOException e) {
-            log.error("Не удалось удалить файл: {}", filePath, e);
+            log.error("Ошибка при удалении файла: {}", fileName, e);
         }
     }
 }

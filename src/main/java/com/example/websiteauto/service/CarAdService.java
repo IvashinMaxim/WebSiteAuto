@@ -18,6 +18,8 @@ import com.example.websiteauto.repositories.CarRepository;
 import com.example.websiteauto.repositories.UserRepository;
 import com.example.websiteauto.repositories.specification.CarAdSpecification;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +41,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class CarAdService {
+    private static final Logger log = LoggerFactory.getLogger(CarAdService.class);
 
     private final CarService carService;
     private final CarAdRepository carAdRepository;
@@ -63,13 +66,16 @@ public class CarAdService {
 
     @Transactional
     public void createCarAd(CarAdRequest request, Long authorId, List<MultipartFile> images) throws IOException {
+        log.info("CreateCarAd started. authorId={}, imagesCount={}",
+                authorId,
+                images != null ? images.size() : 0);
+
         User author = userRepository.findById(authorId)
                 .orElseThrow(() -> new UserNotFoundException(authorId));
 
         Car car = new Car();
         carMapper.updateCarFromDto(request.getCar(), car);
         car.setRealnessOfCar(false);
-//        car.setYearUpp();
 
         carRepository.save(car);
 
@@ -80,27 +86,33 @@ public class CarAdService {
 
         carAdRepository.save(carAd);
         if (images != null && !images.isEmpty()) {
+            log.debug("CreateCarAd images downloaded. imagesCount={}", images.size());
             List<Image> imageList = imageService.createAndSaveImages(images, carAd);
             carAd.setImages(imageList);
         }
         carAdMapper.toAdResponse(carAd);
+        log.info("CreateCarAd completed successfully. carAdId={}, authorId={}",
+                carAd.getId(),
+                authorId);
     }
 
     @Transactional(readOnly = true)
     public CarAdRequest getCarAdForEdit(Long adId, Long currentUserId) {
+        log.info("GetCarAdForEdit started. adId={},userId={}", adId, currentUserId);
         CarAd ad = carAdRepository.findById(adId)
                 .orElseThrow(() -> new CarAdNotFoundException(adId));
         if (!ad.getAuthor().getId().equals(currentUserId)) {
             throw new AccessDeniedException("У пользователя нет прав для редактирования объявления с ID: \" + adId");
         }
+        log.info("GetCarAdForEdit success ended. adId={},userId={}", adId, currentUserId);
         return carAdMapper.toAdRequest(ad);
     }
 
     @Transactional(readOnly = true)
     public CarAdResponse getCarAdResponse(Long adId) {
-        CarAd ad = carAdRepository.findById(adId)
+        return carAdRepository.findById(adId)
+                .map(carAdMapper::toAdResponse)
                 .orElseThrow(() -> new CarAdNotFoundException(adId));
-        return carAdMapper.toAdResponse(ad);
     }
 
     @Transactional(readOnly = true)
@@ -111,14 +123,14 @@ public class CarAdService {
 
     @Transactional(readOnly = true)
     public List<CarAdResponse> getAllCarAds() {
-        List<CarAd> ads = carAdRepository.findAll();
-        return ads.stream()
+        return carAdRepository.findAll().stream()
                 .map(carAdMapper::toAdResponse)
                 .collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional
     public void updateCarAd(Long adId, CarAdRequest request, List<MultipartFile> images, Long currentUserId) throws IOException {
+        log.info("UpdateCarAd started. adId={}, userId={}", adId, currentUserId);
         CarAd carAd = carAdRepository.findById(adId).orElseThrow(() -> new CarAdNotFoundException(adId));
 
         if (!carAd.getAuthor().getId().equals(currentUserId)) {
@@ -134,40 +146,47 @@ public class CarAdService {
                 carMapper.updateCarFromDto(carDto, newFakeCar);
                 carRepository.save(newFakeCar);
                 carAd.setCar(newFakeCar);
+                log.debug("Car replaced with fake. oldCarId={}, newCarId={}", oldCar.getCarId(), newFakeCar.getCarId());
             }
 
         } else {
             carMapper.updateCarFromDto(carDto, oldCar);
+            log.debug("Car replaced with trueCar. oldCarId={}", oldCar.getCarId());
         }
         carAdMapper.updateAdFromRequest(request, carAd);
 
-        List<Long> idsToDelete = request.getRemoveImageIds();
-        if (idsToDelete != null && !idsToDelete.isEmpty()) {
-            carAd.getImages().removeIf(image -> {
-                if (idsToDelete.contains(image.getId())) {
-                    imageService.deleteImageFile();
-                    return true;
-                }
-                return false;
-            });
+        List<Long> imagesIdsToDelete = request.getRemoveImageIds();
+        if (imagesIdsToDelete != null && !imagesIdsToDelete.isEmpty()) {
+            log.debug("Removing images: {}", imagesIdsToDelete);
+            for (Long imgId : imagesIdsToDelete) {
+                imageService.deleteImageById(imgId);
+            }
+            carAd.getImages().removeIf(image -> imagesIdsToDelete.contains(image.getId()));
         }
-
-
         if (images != null && !images.isEmpty()) {
+            log.debug("Adding {} new images", images.size());
             List<Image> newImages = imageService.createAndSaveImages(images, carAd);
             carAd.getImages().addAll(newImages);
         }
         carAdMapper.toAdResponse(carAd);
+        log.info("UpdateCarAd completed. adId={}", adId);
     }
 
     @Transactional
-    public void deleteCarAd(Long id, Long currentUser) throws AccessDeniedException {
-        CarAd ad = carAdRepository.findById(id)
-                .orElseThrow(() -> new CarAdNotFoundException(id));
-        if (!ad.getAuthor().getId().equals(currentUser)) {
+    public void deleteCarAd(Long adId, Long currentUserId) throws AccessDeniedException {
+        log.info("DeleteCarAd started. adId={}, userId={}", adId, currentUserId);
+        CarAd ad = carAdRepository.findById(adId)
+                .orElseThrow(() -> new CarAdNotFoundException(adId));
+        if (!ad.getAuthor().getId().equals(currentUserId)) {
             throw new AccessDeniedException("Вы не можете удалить это объявление");
         }
+        if (ad.getImages() != null) {
+            log.debug("Removing images in deleteCarAd: {}", ad.getImages());
+            List<Long> imageIds = ad.getImages().stream().map(Image::getId).toList();
+            imageIds.forEach(imageService::deleteImageById);
+        }
         carAdRepository.delete(ad);
+        log.info("Car deleted. adId={}", adId);
     }
 
     @Transactional(readOnly = true)
@@ -186,7 +205,6 @@ public class CarAdService {
 
         Map<Long, CarAd> adMap = ads.stream()
                 .collect(Collectors.toMap(CarAd::getId, Function.identity()));
-
         List<CarAdListResponse> dtoList = targetIds.stream()
                 .map(adMap::get)
                 .filter(Objects::nonNull)
@@ -199,7 +217,11 @@ public class CarAdService {
     public Page<CarAdResponse> findAdsByAuthorId(Long authorId, Pageable pageable) {
         Specification<CarAd> spec = (root, query, cb) -> cb.equal(root.get("author").get("id"), authorId);
         Page<CarAd> carAds = carAdRepository.findAll(spec, pageable);
-        System.out.println("Found " + carAds.getTotalElements() + " ads for author " + authorId); // Отладка
+        log.debug("CarAds ids by authorId={}: {}", authorId,
+                carAds.getContent()
+                        .stream()
+                        .map(CarAd::getId)
+                        .toList());
         return carAds.map(carAdMapper::toAdResponse);
     }
 

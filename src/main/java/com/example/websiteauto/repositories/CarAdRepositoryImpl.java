@@ -1,13 +1,14 @@
 package com.example.websiteauto.repositories;
 
+import com.example.websiteauto.entity.Car;
 import com.example.websiteauto.entity.CarAd;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.criteria.Path;
-import jakarta.persistence.criteria.Selection;
+import jakarta.persistence.criteria.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
@@ -20,66 +21,87 @@ public class CarAdRepositoryImpl implements CarAdRepositoryCustom {
     @PersistenceContext
     private EntityManager em;
 
-    private static final int MAX_SEARCH_LIMIT = 1183;
-
     @Override
     public Page<Long> findAllIdsBySpecification(Specification<CarAd> spec, Pageable pageable) {
         var cb = em.getCriteriaBuilder();
+
         var query = cb.createTupleQuery();
         var root = query.from(CarAd.class);
 
         List<Selection<?>> selections = new ArrayList<>();
         selections.add(root.get("id"));
 
-        if (spec != null) {
-            var predicate = spec.toPredicate(root, query, cb);
-            if (predicate != null) query.where(predicate);
-        }
+        Predicate finalPredicate = spec != null ? spec.toPredicate(root, query, cb) : null;
+        if (finalPredicate != null) query.where(finalPredicate);
 
-        List<jakarta.persistence.criteria.Order> orders = new ArrayList<>();
+        query.distinct(false);
+
         if (pageable.getSort().isSorted()) {
-            pageable.getSort().forEach(sortOrder -> {
+            List<jakarta.persistence.criteria.Order> orders = new ArrayList<>();
+            Join<CarAd, Car> carJoin = (Join<CarAd, Car>) root.getJoins().stream()
+                    .filter(j -> j.getAttribute().getName().equals("car"))
+                    .findFirst()
+                    .orElse(null);
+            for (Sort.Order sortOrder : pageable.getSort()) {
                 String property = sortOrder.getProperty();
-                Path<?> sortPath = property.contains(".")
-                        ? root.join("car").get(property.split("\\.")[1])
-                        : root.get(property);
-
-                selections.add(sortPath);
-
-                if (sortOrder.isAscending()) {
-                    orders.add(cb.asc(sortPath));
+                Path<?> sortPath;
+                if (property.contains(".")) {
+                    if (carJoin == null) {
+                        carJoin = root.join("car", JoinType.LEFT);
+                    }
+                    sortPath = carJoin.get(property.split("\\.")[1]);
                 } else {
-                    orders.add(cb.desc(sortPath));
+                    sortPath = root.get(property);
                 }
-            });
+                selections.add(sortPath);
+                orders.add(sortOrder.isAscending() ? cb.asc(sortPath) : cb.desc(sortPath));
+            }
+
             orders.add(cb.desc(root.get("id")));
             query.orderBy(orders);
         }
 
         query.multiselect(selections);
 
-        List<Long> ids = em.createQuery(query)
+        List<Long> contentIds = em.createQuery(query)
                 .setFirstResult((int) pageable.getOffset())
                 .setMaxResults(pageable.getPageSize())
                 .getResultList()
                 .stream()
-                .map(tuple -> (Long) tuple.get(0))
+                .map(t -> (Long) t.get(0))
                 .toList();
 
-        var countQuery = cb.createQuery(Long.class);
-        var countRoot = countQuery.from(CarAd.class);
-        countQuery.select(cb.countDistinct(countRoot.get("id")));
+        int lookAheadCount = 1200;
+        int currentOffset = (int) pageable.getOffset();
+        int limitForCount = currentOffset + lookAheadCount;
 
-        if (spec != null) {
-            countQuery.where(spec.toPredicate(countRoot, countQuery, cb));
+        long totalFound;
+        if (contentIds.size() < pageable.getPageSize() && pageable.getOffset() == 0) {
+            totalFound = contentIds.size();
+        } else {
+            totalFound = getLimitedCount(spec, limitForCount);
         }
-
-        Long actualCount = em.createQuery(countQuery).getSingleResult();
-        long total = (actualCount != null) ? actualCount : 0L;
-
-        return new PageImpl<>(ids, pageable, Math.min(total, MAX_SEARCH_LIMIT));
+        return new PageImpl<>(contentIds, pageable, totalFound);
     }
 
+    private long getLimitedCount(Specification<CarAd> spec, int limit) {
+        var cb = em.getCriteriaBuilder();
+        var criteriaQuery = cb.createQuery(Long.class);
+        var root = criteriaQuery.from(CarAd.class);
+
+        if (spec != null) {
+            Predicate predicate = spec.toPredicate(root, criteriaQuery, cb);
+            if (predicate != null) criteriaQuery.where(predicate);
+        }
+        var typedQuery = em.createQuery(criteriaQuery.select(cb.literal(1L)));
+
+        List<Long> limitedList = typedQuery
+                .setMaxResults(limit)
+                .getResultList();
+
+        int foundSize = limitedList.size();
+        return Math.min(foundSize, limit);
+    }
 
     @Override
     public List<Object> findDistinctValues(String fieldName, Specification<CarAd> spec) {

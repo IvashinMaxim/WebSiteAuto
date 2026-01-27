@@ -13,6 +13,11 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler(org.springframework.web.servlet.NoHandlerFoundException.class)
+    public String handle404(org.springframework.web.servlet.NoHandlerFoundException ex) {
+        log.warn("Resource not found: {} {}", ex.getHttpMethod(), ex.getRequestURL());
+        return "error";
+    }
     @ExceptionHandler(AccessDeniedException.class)
     public String handleAccessDenied(AccessDeniedException ex, Model model) {
         log.warn("Access denied: {}", ex.getMessage());

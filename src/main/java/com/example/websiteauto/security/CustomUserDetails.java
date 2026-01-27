@@ -16,7 +16,6 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Пока ролей нет
         return Collections.emptyList();
     }
 
@@ -27,7 +26,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return user.getUsername();  // логинишься по username
+        return user.getUsername();
     }
 
     @Override

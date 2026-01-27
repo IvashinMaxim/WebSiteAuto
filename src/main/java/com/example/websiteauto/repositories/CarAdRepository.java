@@ -1,8 +1,10 @@
 package com.example.websiteauto.repositories;
 
 import com.example.websiteauto.dto.CarRegressionRow;
+import com.example.websiteauto.dto.response.CarAdListResponse;
 import com.example.websiteauto.entity.CarAd;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -15,6 +17,8 @@ import java.util.List;
 @Repository
 public interface CarAdRepository extends JpaRepository<CarAd, Long>, JpaSpecificationExecutor<CarAd>, CarAdRepositoryCustom {
 
+    List<CarAd> findByAuthorId(Long authorId);
+
     @Query("SELECT DISTINCT ca FROM CarAd ca " +
            "LEFT JOIN FETCH ca.car " +
            "LEFT JOIN FETCH ca.author " +
@@ -22,9 +26,9 @@ public interface CarAdRepository extends JpaRepository<CarAd, Long>, JpaSpecific
            "WHERE ca.id IN :ids")
     List<CarAd> findAllByIdsWithRelations(@Param("ids") List<Long> ids);
 
-    @Query("SELECT DISTINCT ca FROM CarAd ca " +
+    @EntityGraph(attributePaths = {"car", "author"})
+    @Query("SELECT ca FROM CarAd ca " +
            "LEFT JOIN FETCH ca.car " +
-           "LEFT JOIN FETCH ca.author " +
            "WHERE ca.id IN :ids")
     List<CarAd> findAllByIdsForList(@Param("ids") List<Long> ids);
 

@@ -26,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -83,6 +84,7 @@ public class CarAdService {
         carAd.setCar(car);
         carAd.setAuthor(author);
         carAd.setCreatedAt(LocalDateTime.now());
+        carAd.setViews(0);
 
         carAdRepository.save(carAd);
         if (images != null && !images.isEmpty()) {
@@ -191,25 +193,39 @@ public class CarAdService {
 
     @Transactional(readOnly = true)
     public Page<CarAdListResponse> search(CarAdFilter filter, Pageable pageable) {
-        Specification<CarAd> spec = CarAdSpecification.withFilter(filter);
+        StopWatch stopWatch = new StopWatch("Profiling search inside");
 
+        // --- ЭТАП 1: Получение ID (Работа индексов) ---
+        stopWatch.start("1. Fetch IDs (SQL Filter)");
+        Specification<CarAd> spec = CarAdSpecification.withFilter(filter);
         Page<Long> pageIds = carAdRepository.findAllIdsBySpecification(spec, pageable);
+        stopWatch.stop();
 
         if (pageIds.isEmpty()) {
+            System.out.println(stopWatch.prettyPrint());
             return Page.empty(pageable);
         }
 
         List<Long> targetIds = pageIds.getContent();
 
+        // --- ЭТАП 2: Загрузка сущностей из БД ---
+        stopWatch.start("2. Fetch Entities (Hibernate Load)");
         List<CarAd> ads = carAdRepository.findAllByIdsForList(targetIds);
+        stopWatch.stop();
 
+        // --- ЭТАП 3: Превращение в DTO ---
+        stopWatch.start("3. Mapping to DTO (Check for N+1)");
         Map<Long, CarAd> adMap = ads.stream()
                 .collect(Collectors.toMap(CarAd::getId, Function.identity()));
+
         List<CarAdListResponse> dtoList = targetIds.stream()
                 .map(adMap::get)
                 .filter(Objects::nonNull)
-                .map(carAdMapper::toListResponse)
+                .map(carAdMapper::toListResponse) // <-- Подозреваемый
                 .toList();
+        stopWatch.stop();
+
+        System.out.println(stopWatch.prettyPrint());
 
         return new PageImpl<>(dtoList, pageable, pageIds.getTotalElements());
     }

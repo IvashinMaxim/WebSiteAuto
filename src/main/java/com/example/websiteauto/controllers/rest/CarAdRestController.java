@@ -50,7 +50,7 @@ public class CarAdRestController {
     @GetMapping
     public Page<CarAdListResponse> getAll(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "12") int size,
             CarAdFilter filter
     ) {
         Pageable pageable = PageRequest.of(page, size);

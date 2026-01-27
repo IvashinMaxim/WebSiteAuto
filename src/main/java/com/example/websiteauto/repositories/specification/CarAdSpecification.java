@@ -28,8 +28,7 @@ public class CarAdSpecification {
                 }
                 if (filter.getMinYear() != null && filter.getMaxYear() != null
                     && filter.getMinYear() > filter.getMaxYear()) {
-                    // Можно либо вернуть пустой предикат, либо (лучше) приравнять их
-                    filter.setMaxYear(filter.getMinYear()); // или выкинуть ошибку
+                    filter.setMaxYear(filter.getMinYear());
                 }
                 if (filter.getMinYear() != null) {
                     predicates.add(cb.greaterThanOrEqualTo(
@@ -60,7 +59,6 @@ public class CarAdSpecification {
                     ));
                 }
             }
-
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }

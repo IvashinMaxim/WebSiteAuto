@@ -24,7 +24,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.util.StopWatch;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
@@ -32,7 +31,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
-import java.nio.file.AccessDeniedException;
 import java.util.Collections;
 import java.util.List;
 
@@ -76,17 +74,8 @@ public class CarAdViewController {
                           @RequestParam(defaultValue = "12") int size,
                           @RequestParam(defaultValue = "POPULAR") CarAdSortOrder sort,
                           Model model) {
-
-        // 1. Создаем секундомер
-        StopWatch stopWatch = new StopWatch("Profiling listAds");
-
         Pageable pageable = PageRequest.of(page, size, Sort.by(sort.getDirection(), sort.getProperty()));
-
-        // --- ЗАМЕР 1: Поиск объявлений ---
-        stopWatch.start("1. carAdService.search");
         Page<CarAdListResponse> ads = carAdService.search(filter, pageable);
-        stopWatch.stop();
-
         var pagination = PaginationUtils.calculate(
                 ads.getNumber(),
                 ads.getTotalPages(),
@@ -101,33 +90,14 @@ public class CarAdViewController {
         model.addAttribute("endPage", pagination.endPage);
         model.addAttribute("sortOrders", CarAdSortOrder.values());
         model.addAttribute("currentSort", sort);
-
-        // --- ЗАМЕР 2: Получение брендов ---
-        stopWatch.start("2. carService.getAllBrands");
-        var brands = carService.getAllBrands(); // Выполняем метод отдельно
-        stopWatch.stop();
-        model.addAttribute("brands", brands); // Кладем результат в модель
-
-        // --- ЗАМЕР 3: Получение моделей (если нужно) ---
-        stopWatch.start("3. carService.getModelsByBrand");
+        model.addAttribute("brands", carService.getAllBrands());
         if (filter.getBrand() != null && !filter.getBrand().isEmpty()) {
             model.addAttribute("models", carService.getModelsByBrand(filter.getBrand()));
         } else {
             model.addAttribute("models", Collections.emptyList());
         }
-        stopWatch.stop();
-
-        // --- ЗАМЕР 4: Получение годов ---
-        stopWatch.start("4. carService.getAllYears");
-        var years = carService.getAllYears();
-        stopWatch.stop();
-        model.addAttribute("years", years);
-
+        model.addAttribute("years", carService.getAllYears());
         model.addAttribute("filter", filter);
-
-        // Выводим отчет в консоль
-        System.out.println(stopWatch.prettyPrint());
-
         return "ads-list";
     }
 

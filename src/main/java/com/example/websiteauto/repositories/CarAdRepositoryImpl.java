@@ -24,7 +24,6 @@ public class CarAdRepositoryImpl implements CarAdRepositoryCustom {
     @Override
     public Page<Long> findAllIdsBySpecification(Specification<CarAd> spec, Pageable pageable) {
         var cb = em.getCriteriaBuilder();
-
         var query = cb.createTupleQuery();
         var root = query.from(CarAd.class);
 
@@ -94,11 +93,9 @@ public class CarAdRepositoryImpl implements CarAdRepositoryCustom {
             if (predicate != null) criteriaQuery.where(predicate);
         }
         var typedQuery = em.createQuery(criteriaQuery.select(cb.literal(1L)));
-
         List<Long> limitedList = typedQuery
                 .setMaxResults(limit)
                 .getResultList();
-
         int foundSize = limitedList.size();
         return Math.min(foundSize, limit);
     }

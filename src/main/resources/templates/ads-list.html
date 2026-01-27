@@ -278,9 +278,7 @@
         const hiddenSortField = document.getElementById('hiddenSortField');
 
         if (filterForm && sortSelect && hiddenSortField) {
-            // Копируем выбранную сортировку в скрытое поле формы
             hiddenSortField.value = sortSelect.value;
-            // Отправляем форму со всеми фильтрами и новой сортировкой
             filterForm.submit();
         }
     }
@@ -303,13 +301,10 @@
 
         const formData = new FormData(filterForm);
         const params = new URLSearchParams();
-
-        // Список полей, которые ваш CarService реально обрабатывает в searchDictionary
         const allowedParams = ['brand', 'model', 'minYear', 'bodyType', 'engineType', 'transmission', 'driveType'];
 
         formData.forEach((value, key) => {
             if (value && allowedParams.includes(key)) {
-                // Мапим minYear с фронта в yearLow для бэкенда
                 if (key === 'minYear') {
                     params.set('yearLow', value);
                 } else {
@@ -318,7 +313,6 @@
             }
         });
 
-        // Устанавливаем цель (что именно мы сейчас хотим загрузить)
         params.set('target', fieldName);
 
         targetSelect.innerHTML = '';
@@ -338,7 +332,6 @@
                     option.value = value;
                     option.text = value;
 
-                    // Если значение совпадает с тем, что было выбрано до обновления, оставляем его выбранным
                     if (value === currentValue) {
                         option.selected = true;
                     }
@@ -354,24 +347,21 @@
 
                 if (currentValue && targetSelect.value === currentValue && dependencies[targetId] && !resetChildren) {
                     dependencies[targetId].forEach(childId => {
-                        updateTargetField(childId, false); // Загружаем данные для ребенка, не сбрасывая его текущее значение
+                        updateTargetField(childId, false);
                     });
                 }
 
-                // 5. Если сброс требовался (например, Марка поменялась)
                 if (resetChildren && dependencies[targetId]) {
                     dependencies[targetId].forEach(childId => {
                         const child = document.getElementById(childId);
                         if (child) {
-                            child.value = ''; // Сбрасываем выбранное значение
+                            child.value = '';
 
-                            // Очищаем options, оставляя только первую
                             const firstChildOption = child.options[0];
                             child.innerHTML = '';
                             child.appendChild(firstChildOption);
                             child.disabled = false;
 
-                            // Рекурсивно очищаем более глубокие зависимости
                             if (dependencies[childId]) {
                                 dependencies[childId].forEach(grandchildId => {
                                     const grandchild = document.getElementById(grandchildId);
